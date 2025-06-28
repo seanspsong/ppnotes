@@ -260,6 +260,8 @@
 				DEVELOPMENT_TEAM = ZW8PRW8M63;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "PPNotes needs microphone access to record your voice notes for transcription and playback.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "PPNotes uses speech recognition to automatically transcribe your voice notes into text for easy searching and reading.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -291,6 +293,8 @@
 				DEVELOPMENT_TEAM = ZW8PRW8M63;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "PPNotes needs microphone access to record your voice notes for transcription and playback.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "PPNotes uses speech recognition to automatically transcribe your voice notes into text for easy searching and reading.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

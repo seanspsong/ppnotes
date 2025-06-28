@@ -24,6 +24,15 @@ struct VoiceNote: Identifiable, Codable {
         self.transcription = transcription
     }
     
+    init(id: UUID, title: String, audioFileName: String, duration: TimeInterval, timestamp: Date, transcription: String) {
+        self.id = id
+        self.title = title
+        self.audioFileName = audioFileName
+        self.duration = duration
+        self.timestamp = timestamp
+        self.transcription = transcription
+    }
+    
     var formattedDuration: String {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60

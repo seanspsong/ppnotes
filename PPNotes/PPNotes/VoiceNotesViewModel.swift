@@ -10,6 +10,7 @@ import AVFoundation
 import SwiftUI
 import Combine
 import UIKit
+import Speech
 
 @MainActor
 class VoiceNotesViewModel: NSObject, ObservableObject {
@@ -20,10 +21,13 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var isAddingNewNote = false
     @Published var currentlyPlayingId: UUID?
     @Published var playbackProgress: Double = 0
+    @Published var isTranscribing = false
     
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
     private var playbackTimer: Timer?
+    private var speechTranscriber: SpeechTranscriber?
+    private var speechAnalyzer: SpeechAnalyzer?
     private let maxRecordingTime: TimeInterval = 180 // 3 minutes
     private let warningTime: TimeInterval = 10 // 10 seconds warning
     
@@ -49,6 +53,7 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         super.init()
         setupAudioSession()
         loadVoiceNotes()
+        requestPermissions()
     }
     
     private func setupAudioSession() {
@@ -63,6 +68,12 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     
     func startRecording() {
         guard !isRecording else { return }
+        
+        // Check microphone permission
+        guard AVAudioSession.sharedInstance().recordPermission == .granted else {
+            print("Microphone permission not granted")
+            return
+        }
         
         // Show processing card immediately when recording starts
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -140,27 +151,269 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     }
     
     private func createVoiceNote(from audioURL: URL, duration: TimeInterval) {
-        // For now, create a simple title and empty transcription
-        // In a real app, this would use on-device LLM for transcription
-        let title = "Voice Note"
         let fileName = audioURL.lastPathComponent
         
+        // Create initial voice note with empty transcription
         let voiceNote = VoiceNote(
-            title: title,
+            title: "Processing...",
             audioFileName: fileName,
             duration: duration,
             timestamp: Date(),
             transcription: ""
         )
         
-        // Brief delay to show processing state, then replace processing card with actual voice note
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                self.voiceNotes.insert(voiceNote, at: 0)
-                self.isAddingNewNote = false
-            }
-            self.saveVoiceNotes()
+        // Add the voice note immediately and start transcription
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            voiceNotes.insert(voiceNote, at: 0)
+            isAddingNewNote = false
         }
+        saveVoiceNotes()
+        
+        // Start transcription process
+        Task {
+            await transcribeAudio(audioURL: audioURL, voiceNoteId: voiceNote.id)
+        }
+    }
+    
+    // MARK: - Permission Functions
+    
+    private func requestPermissions() {
+        // Request microphone permission
+        AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            if granted {
+                print("Microphone permission granted")
+            } else {
+                print("Microphone permission denied")
+            }
+        }
+        
+        // Request speech recognition permission
+        SFSpeechRecognizer.requestAuthorization { authStatus in
+            switch authStatus {
+            case .authorized:
+                print("Speech recognition permission granted")
+            case .denied:
+                print("Speech recognition permission denied")
+            case .restricted:
+                print("Speech recognition restricted")
+            case .notDetermined:
+                print("Speech recognition permission not determined")
+            @unknown default:
+                print("Unknown speech recognition permission status")
+            }
+        }
+    }
+    
+    // MARK: - Transcription Functions
+    
+    private func setupTranscriber() async throws {
+        // Check if models are available and get the best locale to use
+        let bestLocale = try await ensureModelsAvailable()
+        
+        speechTranscriber = SpeechTranscriber(
+            locale: bestLocale,
+            transcriptionOptions: [],
+            reportingOptions: [],
+            attributeOptions: []
+        )
+        
+        guard let transcriber = speechTranscriber else {
+            throw TranscriptionError.failedToSetup
+        }
+        
+        speechAnalyzer = SpeechAnalyzer(modules: [transcriber])
+    }
+    
+    private func ensureModelsAvailable() async throws -> Locale {
+        let supportedLocales = await SpeechTranscriber.supportedLocales
+        let installedLocales = await SpeechTranscriber.installedLocales
+        let currentLocale = Locale.current
+        
+        print("Current device locale: \(currentLocale.identifier)")
+        print("Supported locales: \(supportedLocales.map { $0.identifier })")
+        print("Installed locales: \(installedLocales.map { $0.identifier })")
+        
+        // First try the current locale
+        if supportedLocales.contains(where: { $0.identifier == currentLocale.identifier }) {
+            if installedLocales.contains(where: { $0.identifier == currentLocale.identifier }) {
+                print("Using device locale: \(currentLocale.identifier)")
+                return currentLocale
+            } else {
+                print("Device locale supported but not installed: \(currentLocale.identifier)")
+            }
+        } else {
+            print("Device locale not supported: \(currentLocale.identifier)")
+        }
+        
+        // Fall back to English (US) if current locale not supported
+        let englishLocale = Locale(identifier: "en-US")
+        if supportedLocales.contains(where: { $0.identifier == englishLocale.identifier }) {
+            if installedLocales.contains(where: { $0.identifier == englishLocale.identifier }) {
+                print("Falling back to English (US) for transcription")
+                return englishLocale
+            }
+        }
+        
+        // Try any available English variant
+        let englishVariants = ["en-US", "en-GB", "en-AU", "en-IN"]
+        for variant in englishVariants {
+            let locale = Locale(identifier: variant)
+            if supportedLocales.contains(where: { $0.identifier == locale.identifier }) {
+                if installedLocales.contains(where: { $0.identifier == locale.identifier }) {
+                    print("Falling back to \(variant) for transcription")
+                    return locale
+                }
+            }
+        }
+        
+        // If no English variants available, try the first available locale
+        for supportedLocale in supportedLocales {
+            if installedLocales.contains(where: { $0.identifier == supportedLocale.identifier }) {
+                print("Using first available locale: \(supportedLocale.identifier)")
+                return supportedLocale
+            }
+        }
+        
+        throw TranscriptionError.localeNotSupported
+    }
+    
+    private func transcribeAudio(audioURL: URL, voiceNoteId: UUID) async {
+        // Check speech recognition permission
+        guard SFSpeechRecognizer.authorizationStatus() == .authorized else {
+            print("Speech recognition not authorized")
+            await MainActor.run {
+                updateVoiceNoteWithTranscription(
+                    voiceNoteId: voiceNoteId,
+                    transcription: "",
+                    fallbackTitle: "Voice Note"
+                )
+            }
+            return
+        }
+        
+        do {
+            await MainActor.run {
+                isTranscribing = true
+            }
+            
+            // Setup transcriber
+            try await setupTranscriber()
+            
+            guard let transcriber = speechTranscriber,
+                  let analyzer = speechAnalyzer else {
+                throw TranscriptionError.failedToSetup
+            }
+            
+            // Create transcription task
+            let transcriptionText = try await performTranscription(
+                audioURL: audioURL,
+                transcriber: transcriber,
+                analyzer: analyzer
+            )
+            
+            // Update the voice note with transcription
+            await MainActor.run {
+                updateVoiceNoteWithTranscription(
+                    voiceNoteId: voiceNoteId,
+                    transcription: transcriptionText
+                )
+                isTranscribing = false
+            }
+            
+        } catch {
+            print("Transcription failed: \(error.localizedDescription)")
+            if let transcriptionError = error as? TranscriptionError {
+                print("Error type: \(transcriptionError)")
+            }
+            
+            await MainActor.run {
+                // Update with fallback title
+                updateVoiceNoteWithTranscription(
+                    voiceNoteId: voiceNoteId,
+                    transcription: "",
+                    fallbackTitle: "Voice Note"
+                )
+                isTranscribing = false
+            }
+        }
+    }
+    
+    private func performTranscription(
+        audioURL: URL,
+        transcriber: SpeechTranscriber,
+        analyzer: SpeechAnalyzer
+    ) async throws -> String {
+        
+        // Create an AVAudioFile from the URL
+        let audioFile = try AVAudioFile(forReading: audioURL)
+        
+        // Collect all transcription results
+        async let transcriptionFuture = transcriber.results
+            .reduce(into: "") { result, transcriptionResult in
+                result += transcriptionResult.text.description
+            }
+        
+        // Start analyzing the audio file
+        if let lastSample = try await analyzer.analyzeSequence(from: audioFile) {
+            try await analyzer.finalizeAndFinish(through: lastSample)
+        } else {
+            await analyzer.cancelAndFinishNow()
+        }
+        
+        return try await transcriptionFuture
+    }
+    
+    private func updateVoiceNoteWithTranscription(
+        voiceNoteId: UUID,
+        transcription: String,
+        fallbackTitle: String? = nil
+    ) {
+        guard let index = voiceNotes.firstIndex(where: { $0.id == voiceNoteId }) else {
+            return
+        }
+        
+        let title: String
+        if !transcription.isEmpty {
+            // Generate title from first few words of transcription
+            title = generateTitleFromTranscription(transcription)
+        } else {
+            title = fallbackTitle ?? "Voice Note"
+        }
+        
+        voiceNotes[index] = VoiceNote(
+            id: voiceNotes[index].id,
+            title: title,
+            audioFileName: voiceNotes[index].audioFileName,
+            duration: voiceNotes[index].duration,
+            timestamp: voiceNotes[index].timestamp,
+            transcription: transcription
+        )
+        
+        saveVoiceNotes()
+    }
+    
+    private func generateTitleFromTranscription(_ transcription: String) -> String {
+        let words = transcription.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+        
+        if words.isEmpty {
+            return "Voice Note"
+        }
+        
+        // Take first 2-3 words for title
+        let titleWords = Array(words.prefix(3))
+        let title = titleWords.joined(separator: " ")
+        
+        // Capitalize first letter and limit length
+        let capitalizedTitle = title.prefix(1).capitalized + title.dropFirst()
+        
+        // Truncate if too long
+        if capitalizedTitle.count > 25 {
+            return String(capitalizedTitle.prefix(22)) + "..."
+        }
+        
+        return capitalizedTitle
     }
     
     private func getDocumentsDirectory() -> URL {
@@ -266,4 +519,25 @@ extension VoiceNotesViewModel: AVAudioPlayerDelegate {
         print("Audio player error: \(error?.localizedDescription ?? "Unknown error")")
         stopPlayback()
     }
-} 
+}
+
+// MARK: - Transcription Errors
+enum TranscriptionError: Error, LocalizedError {
+    case failedToSetup
+    case localeNotSupported
+    case modelsNotInstalled
+    case transcriptionFailed
+    
+    var errorDescription: String? {
+        switch self {
+        case .failedToSetup:
+            return "Failed to setup speech transcriber"
+        case .localeNotSupported:
+            return "No supported languages available for transcription. Please ensure iOS 26 speech models are installed."
+        case .modelsNotInstalled:
+            return "Speech recognition models not installed. Please download language models in Settings > General > Keyboard & Dictation."
+        case .transcriptionFailed:
+            return "Transcription process failed"
+        }
+    }
+}

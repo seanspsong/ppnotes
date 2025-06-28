@@ -78,6 +78,42 @@ struct VoiceNoteCard: View {
                 Spacer()
             }
             
+            // Transcription text (if available)
+            if !voiceNote.transcription.isEmpty {
+                Text(voiceNote.transcription)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .padding(.vertical, 4)
+            } else if viewModel.isTranscribing {
+                HStack(spacing: 4) {
+                    Text("Transcribing...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    // Animated dots
+                    HStack(spacing: 2) {
+                        ForEach(0..<3, id: \.self) { index in
+                            Circle()
+                                .fill(Color.secondary)
+                                .frame(width: 3, height: 3)
+                                .scaleEffect(animationTrigger ? 1.2 : 0.8)
+                                .animation(
+                                    .easeInOut(duration: 0.6)
+                                    .repeatForever(autoreverses: true)
+                                    .delay(Double(index) * 0.2),
+                                    value: animationTrigger
+                                )
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+                .onAppear {
+                    animationTrigger = true
+                }
+            }
+            
             Spacer()
             
             // Waveform visualization with playback progress

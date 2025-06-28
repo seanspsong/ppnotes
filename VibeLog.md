@@ -88,4 +88,26 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0005
+- **Time**: 22:35
+- **Date**: 2024-06-28
+- **Vibe Summary**: Resolved critical TCC privacy violation crash by implementing proper iOS privacy permissions for microphone and speech recognition access. Successfully tested transcription functionality on iPhone 16e with iOS 26 beta.
+- **Achievement**: 
+  - ✅ Fixed TCC (Transparency, Consent, and Control) privacy violation crash
+  - ✅ Added NSMicrophoneUsageDescription and NSSpeechRecognitionUsageDescription via INFOPLIST_KEY build settings
+  - ✅ Implemented runtime permission request system in VoiceNotesViewModel initialization
+  - ✅ Added permission checks before recording (microphone) and transcription (speech recognition)
+  - ✅ Configured graceful fallbacks when permissions are denied by user
+  - ✅ Resolved Xcode 16 Info.plist conflict by using auto-generated approach instead of manual plist
+  - ✅ Successfully tested app on real iPhone 16e device running iOS 26 beta
+  - ✅ Confirmed voice recording and iOS 26 SpeechAnalyzer integration works on actual hardware
+- **Lesson Learnt**: 
+  - **iOS Privacy Framework Evolution**: Privacy permissions in iOS have become increasingly strict, requiring explicit user consent dialogs and proper usage descriptions. TCC violations cause immediate app crashes.
+  - **Xcode 16 Modernization**: New Xcode project format auto-generates Info.plist, requiring privacy keys to be set via INFOPLIST_KEY build settings rather than manual plist files.
+  - **Simulator vs Device Reality**: iOS 26 beta simulators lack advanced ML capabilities like SpeechAnalyzer, but real devices have full functionality. Always test privacy-sensitive features on actual hardware.
+  - **Permission Request Timing**: Privacy permissions should be requested early (app launch) rather than just-in-time to provide better user experience and avoid mid-flow interruptions.
+  - **Beta Software Limitations**: iOS 26 SpeechTranscriber framework is only available on physical devices, not simulators, highlighting importance of device testing for cutting-edge features.
+
+---
+
 *Continue adding entries below...* 

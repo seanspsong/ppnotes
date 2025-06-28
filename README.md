@@ -18,6 +18,33 @@ PPNotes (Personal & Private Notes) is an iOS app for taking voice notes using Ap
 - iOS 26.0+
 - Device with on-device LLM support
 
+## Language Support
+
+PPNotes uses iOS 26's new SpeechTranscriber framework for on-device voice transcription. Currently supported languages include:
+
+### Available Now
+- **English** (US, UK, Australia, India)
+- **French** (France)
+- **German** (Germany)
+- **Italian** (Italy)
+- **Portuguese** (Brazil)
+- **Spanish** (Spain)
+- **Japanese** (Japan)
+- **Korean** (Korea)
+- **Chinese** (Mandarin, Simplified)
+
+### Coming End of 2025
+- **Danish**
+- **Dutch**
+- **Norwegian**
+- **Portuguese** (Portugal)
+- **Swedish**
+- **Turkish**
+- **Chinese** (Traditional)
+- **Vietnamese**
+
+> **Note**: All transcription happens entirely on-device with no internet required. Apple continues to add more languages regularly. For unsupported languages, the app falls back to the system's DictationTranscriber which supports additional languages.
+
 ## Privacy
 
 Everything stays on your device. No data is sent to external servers or the cloud.
