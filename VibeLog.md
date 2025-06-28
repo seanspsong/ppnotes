@@ -28,4 +28,21 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0002
+- **Time**: 21:15
+- **Date**: 2024-06-28
+- **Vibe Summary**: App design phase following Apple Human Interface Guidelines. Focus on push-to-talk recording interaction and voice note cards layout with time limits and user feedback.
+- **Achievement**: 
+  - ✅ Created comprehensive design document in README.md
+  - ✅ Designed push-to-talk recording button with proper HIG compliance
+  - ✅ Specified voice note card layout (staggered sticky-note style)
+  - ✅ Defined 3-minute recording limit with progressive warnings
+  - ✅ Added vibration feedback at 10 seconds remaining
+  - ✅ Designed accessibility features (VoiceOver, Dynamic Type, Motor accessibility)
+  - ✅ Specified color system, typography, and animation principles
+  - ✅ Created detailed interaction flows and UI specifications
+- **Lesson Learnt**: Following Apple HIG early in design phase prevents rework later. Breaking down complex interactions (like recording states) into clear visual and haptic feedback stages creates better UX. Recording time limits need progressive warnings rather than sudden cut-offs. Accessibility considerations should be designed in, not added later.
+
+---
+
 *Continue adding entries below...* 
