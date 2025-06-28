@@ -110,4 +110,57 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0006
+- **Time**: 23:00
+- **Date**: 2024-06-28
+- **Vibe Summary**: Fixed Chinese transcription issue by implementing proper language selection based on Apple's WWDC25 SpeechAnalyzer API recommendations. Replaced auto-detection approach with user-configurable language preferences for reliable multilingual transcription.
+- **Achievement**: 
+  - ✅ Researched Apple WWDC25 SpeechAnalyzer documentation for best practices
+  - ✅ Replaced automatic language detection with user-configurable language preference system
+  - ✅ Implemented manual language switching functions (Chinese Simplified/Traditional, English)
+  - ✅ Added UserDefaults-based language preference persistence
+  - ✅ Enhanced language model availability checking with better locale matching
+  - ✅ Created getAvailableLanguages() function to show installed vs downloadable languages
+  - ✅ Improved error handling with specific guidance for Chinese language model installation
+  - ✅ Added comprehensive Chinese locale support (zh-CN, zh-TW, zh-Hans, zh-Hant variants)
+  - ✅ Updated TranscriptionError enum with detailed user guidance for language setup
+  - ✅ Implemented convenience functions: switchToChineseSimplified(), switchToChineseTraditional(), switchToEnglish()
+- **Lesson Learnt**: 
+  - **Language Detection Paradigm**: Apple's SpeechAnalyzer doesn't auto-detect spoken language from audio content. Instead, it requires explicit locale specification based on user preference or device settings, following the principle that users know what language they intend to speak.
+  - **iOS 26 Language Model Architecture**: Speech transcription models are downloaded per-language and stored in system storage, not app storage. Users must have language models installed via iOS Settings > Keyboards or language preferences.
+  - **Locale vs Language Code Matching**: iOS locale matching is nuanced - zh-CN, zh-Hans, zh-Hans-CN all refer to Chinese Simplified but may have different availability. Robust matching requires checking both exact identifier and language code.
+  - **User Experience for Multilingual Apps**: Rather than trying to be "smart" with auto-detection, providing clear manual language selection with visual indicators (✅ installed, 📥 download required) gives users control and transparency.
+  - **Apple Documentation Evolution**: WWDC25 represents a major shift from SFSpeechRecognizer to SpeechAnalyzer with fundamentally different APIs and assumptions about language handling. Following official examples prevents architectural mistakes.
+
+---
+
+### VL0007
+- **Time**: 23:51
+- **Date**: 2025-06-28
+- **Vibe Summary**: Implemented comprehensive delete mode functionality with intuitive iOS-style interaction patterns. Added long-press gesture to enter delete mode, shake animations, delete button overlays, and proper UI state management across all components.
+- **Achievement**: 
+  - ✅ Added delete mode state management to VoiceNotesViewModel with isDeleteMode @Published property
+  - ✅ Implemented enterDeleteMode() and exitDeleteMode() functions with haptic feedback
+  - ✅ Created deleteVoiceNote() function with proper file system cleanup and error handling
+  - ✅ Enhanced ContentView with delete mode UI - tap-to-exit background gesture and conditional toolbar
+  - ✅ Updated toolbar to show "Done" button during delete mode instead of settings gear
+  - ✅ Modified RecordingButton to disable recording and show contextual messages in delete mode
+  - ✅ Added visual feedback to RecordingButton - greyed out appearance and disabled pulse animation
+  - ✅ Implemented VoiceNoteCard shake animation during delete mode for iOS-native feel
+  - ✅ Added red delete button overlay (minus.circle.fill) positioned in top-right corner of cards
+  - ✅ Created long-press gesture on cards to enter delete mode (replacing context menu)
+  - ✅ Added card scaling animation (0.95x) during delete mode for visual hierarchy
+  - ✅ Implemented automatic delete mode exit when no notes remain
+  - ✅ Enhanced animations with proper spring timing for smoother transitions
+- **Lesson Learnt**: 
+  - **iOS Design Patterns**: Long-press to enter delete mode with shake animations matches iOS Home Screen app deletion behavior, creating familiar user experience. Users intuitively understand this interaction pattern.
+  - **State Management Across Views**: Delete mode requires coordinated state changes across multiple SwiftUI views. Using @Published properties in the ViewModel ensures consistent UI updates when mode changes.
+  - **Animation Layering**: Combining multiple animations (shake, scale, opacity, transition) requires careful timing coordination. Using .animation() modifiers with proper duration values prevents animation conflicts.
+  - **File System Safety**: Delete operations must handle both data model cleanup (removing from array) and file system cleanup (deleting audio files). Always check file existence before deletion attempts.
+  - **UX Feedback Hierarchy**: Different haptic feedback styles (medium for mode entry, rigid for deletion) provide subtle but important user feedback about action severity and state changes.
+  - **Conditional UI Components**: SwiftUI's conditional view rendering allows for clean state-dependent UI without complex view hierarchies. Using @ViewBuilder patterns keeps code maintainable.
+  - **Gesture Precedence**: Long-press gestures on cards override playback tap gestures during delete mode, requiring careful gesture state management to prevent conflicts.
+
+---
+
 *Continue adding entries below...* 

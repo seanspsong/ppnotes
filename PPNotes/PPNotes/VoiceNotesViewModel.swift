@@ -22,6 +22,7 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var currentlyPlayingId: UUID?
     @Published var playbackProgress: Double = 0
     @Published var isTranscribing = false
+    @Published var isDeleteMode = false
     
     private var pausedNoteId: UUID?
     
@@ -611,6 +612,58 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     
     func switchToEnglish() {
         setPreferredTranscriptionLanguage("en-US")
+    }
+    
+    // MARK: - Delete Functions
+    
+    func enterDeleteMode() {
+        // Stop any playback when entering delete mode
+        stopPlayback()
+        isDeleteMode = true
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        print("🗑️ Entered delete mode")
+    }
+    
+    func exitDeleteMode() {
+        isDeleteMode = false
+        print("🗑️ Exited delete mode")
+    }
+    
+    func deleteVoiceNote(_ voiceNote: VoiceNote) {
+        // Stop playback if this note is currently playing
+        if currentlyPlayingId == voiceNote.id {
+            stopPlayback()
+        }
+        
+        // Delete the audio file
+        let audioURL = getDocumentsDirectory().appendingPathComponent(voiceNote.audioFileName)
+        do {
+            if FileManager.default.fileExists(atPath: audioURL.path) {
+                try FileManager.default.removeItem(at: audioURL)
+                print("🗑️ Deleted audio file: \(voiceNote.audioFileName)")
+            }
+        } catch {
+            print("❌ Failed to delete audio file: \(error.localizedDescription)")
+        }
+        
+        // Remove from the array
+        voiceNotes.removeAll { $0.id == voiceNote.id }
+        saveVoiceNotes()
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .rigid)
+        impactFeedback.impactOccurred()
+        
+        print("🗑️ Deleted voice note: \(voiceNote.title)")
+        
+        // Exit delete mode if no notes remain
+        if voiceNotes.isEmpty {
+            exitDeleteMode()
+        }
     }
 }
 

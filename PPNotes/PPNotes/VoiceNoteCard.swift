@@ -14,6 +14,7 @@ struct VoiceNoteCard: View {
     let isCurrentlyRecording: Bool
     @ObservedObject var viewModel: VoiceNotesViewModel
     @State private var animationTrigger = false
+    @State private var shakeOffset: CGFloat = 0
     
     private var isPlaying: Bool {
         viewModel.currentlyPlayingId == voiceNote.id
@@ -196,17 +197,62 @@ struct VoiceNoteCard: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
         .rotationEffect(.degrees(rotation))
+        .offset(x: shakeOffset)
+        .overlay(
+            // Delete button overlay
+            Group {
+                if viewModel.isDeleteMode {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                viewModel.deleteVoiceNote(voiceNote)
+                            }) {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.red)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                            }
+                            .scaleEffect(1.2)
+                            .offset(x: 8, y: -8)
+                        }
+                        Spacer()
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+        )
+        .scaleEffect(viewModel.isDeleteMode ? 0.95 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isDeleteMode)
+        .onChange(of: viewModel.isDeleteMode) { _, isDeleteMode in
+            if isDeleteMode {
+                startShaking()
+            } else {
+                stopShaking()
+            }
+        }
         .onLongPressGesture {
-            showContextMenu()
+            if !viewModel.isDeleteMode {
+                viewModel.enterDeleteMode()
+            }
         }
     }
     
-    private func showContextMenu() {
-        // Haptic feedback for long press
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-        impactFeedback.impactOccurred()
-        
-        // TODO: Implement context menu (Play, Share, Delete, Edit Title)
+    private func startShaking() {
+        withAnimation(
+            .easeInOut(duration: 0.1)
+            .repeatForever(autoreverses: true)
+        ) {
+            shakeOffset = 2
+        }
+    }
+    
+    private func stopShaking() {
+        withAnimation(.easeOut(duration: 0.1)) {
+            shakeOffset = 0
+        }
     }
 }
 

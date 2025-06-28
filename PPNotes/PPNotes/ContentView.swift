@@ -17,6 +17,11 @@ struct ContentView: View {
                     // Background
                     Color(.systemBackground)
                         .ignoresSafeArea()
+                        .onTapGesture {
+                            if viewModel.isDeleteMode {
+                                viewModel.exitDeleteMode()
+                            }
+                        }
                     
                     VStack(spacing: 0) {
                         // Voice Notes Grid
@@ -53,12 +58,13 @@ struct ContentView: View {
                                             insertion: .scale.combined(with: .opacity),
                                             removal: .scale.combined(with: .opacity)
                                         ))
-                                        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.voiceNotes.count)
+                                        .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
                                     }
                                 }
                                 .padding(.top, 20)
                                 .padding(.bottom, 120) // Add bottom padding to prevent content being cut off
-                                .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.isAddingNewNote)
+                                .animation(.spring(response: 1.0, dampingFraction: 0.85), value: viewModel.isAddingNewNote)
+                                .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
                             }
                         }
                         .refreshable {
@@ -86,9 +92,17 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: SettingsView()) {
-                        Image(systemName: "gear")
-                            .foregroundColor(.primary)
+                    if viewModel.isDeleteMode {
+                        Button("Done") {
+                            viewModel.exitDeleteMode()
+                        }
+                        .fontWeight(.semibold)
+                        .foregroundColor(.accentColor)
+                    } else {
+                        NavigationLink(destination: SettingsView()) {
+                            Image(systemName: "gear")
+                                .foregroundColor(.primary)
+                        }
                     }
                 }
             }

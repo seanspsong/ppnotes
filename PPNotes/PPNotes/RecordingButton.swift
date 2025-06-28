@@ -27,6 +27,17 @@ struct RecordingButton: View {
         }
     }
     
+    // Button color based on state
+    private var buttonColor: Color {
+        if viewModel.isDeleteMode {
+            return Color.secondary.opacity(0.3)
+        } else if viewModel.isRecording {
+            return Color.accentColor
+        } else {
+            return Color.accentColor.opacity(0.7)
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 16) {
             // Recording timer (only visible when recording)
@@ -38,12 +49,20 @@ struct RecordingButton: View {
                     .animation(.easeInOut(duration: 0.3), value: timerColor)
             }
             
+            // Delete mode message
+            if viewModel.isDeleteMode {
+                Text("Delete mode active")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .transition(.opacity)
+            }
+            
             // Main recording button
             Button(action: {}) {
                 ZStack {
                     // Background circle
                     Circle()
-                        .fill(viewModel.isRecording ? Color.accentColor : Color.accentColor.opacity(0.7))
+                        .fill(buttonColor)
                         .frame(width: currentButtonSize, height: currentButtonSize)
                         .scaleEffect(pulseEffect)
                         .animation(.easeInOut(duration: 0.3), value: currentButtonSize)
@@ -82,8 +101,13 @@ struct RecordingButton: View {
             }
             
             // Push to Talk label
-            if !viewModel.isRecording {
+            if !viewModel.isRecording && !viewModel.isDeleteMode {
                 Text("🎙️ Push to Talk")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .transition(.opacity)
+            } else if viewModel.isDeleteMode {
+                Text("Tap 'Done' to exit")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .transition(.opacity)
@@ -97,7 +121,7 @@ struct RecordingButton: View {
     }
     
     private var pulseEffect: CGFloat {
-        if viewModel.isRecording {
+        if viewModel.isRecording || viewModel.isDeleteMode {
             return 1.0
         } else {
             return pulseAnimation ? 1.05 : 1.0
@@ -109,6 +133,11 @@ struct RecordingButton: View {
     }
     
     private func handlePressStateChange(_ pressing: Bool) {
+        // Don't allow recording in delete mode
+        if viewModel.isDeleteMode {
+            return
+        }
+        
         withAnimation(.easeInOut(duration: 0.1)) {
             isPressed = pressing
         }
@@ -121,7 +150,7 @@ struct RecordingButton: View {
     }
     
     private func startPulseAnimation() {
-        if !viewModel.isRecording {
+        if !viewModel.isRecording && !viewModel.isDeleteMode {
             pulseAnimation = true
         }
     }
