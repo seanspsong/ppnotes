@@ -6,13 +6,18 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct VoiceNoteCard: View {
     let voiceNote: VoiceNote
     let index: Int
     let isCurrentlyRecording: Bool
-    @State private var isPlaying = false
+    @ObservedObject var viewModel: VoiceNotesViewModel
     @State private var animationTrigger = false
+    
+    private var isPlaying: Bool {
+        viewModel.currentlyPlayingId == voiceNote.id
+    }
     
     // Random slight rotation for staggered effect
     private var rotation: Double {
@@ -36,6 +41,16 @@ struct VoiceNoteCard: View {
         return heights[index % heights.count]
     }
     
+    private func waveformColor(for index: Int, isActive: Bool) -> Color {
+        if isCurrentlyRecording {
+            return Color.accentColor
+        } else if isActive {
+            return Color.accentColor.opacity(0.8)
+        } else {
+            return Color.secondary.opacity(0.6)
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header with date and time
@@ -54,18 +69,25 @@ struct VoiceNoteCard: View {
             }
             
             // Auto-generated title
-            Text(voiceNote.title)
-                .font(.headline)
-                .lineLimit(2)
-                .foregroundColor(.primary)
+            HStack {
+                Text(voiceNote.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+            }
             
             Spacer()
             
-            // Waveform visualization placeholder
+            // Waveform visualization with playback progress
             HStack(spacing: 2) {
                 ForEach(0..<20, id: \.self) { barIndex in
+                    let progressThreshold = Double(barIndex) / 20.0
+                    let isBarActive = isPlaying && viewModel.playbackProgress > progressThreshold
+                    
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(isCurrentlyRecording ? Color.accentColor : Color.secondary)
+                        .fill(waveformColor(for: barIndex, isActive: isBarActive))
                         .frame(
                             width: 2, 
                             height: staticBarHeight(for: barIndex)
@@ -97,13 +119,35 @@ struct VoiceNoteCard: View {
                 }
             }
             
-            // Duration badge
+            // Duration badge with playback progress and play button
             HStack {
-                Text(voiceNote.formattedDuration)
-                    .font(.footnote)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(voiceNote.formattedDuration)
+                        .font(.footnote)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    
+                    if isPlaying {
+                        Text("\(Int(viewModel.playbackProgress * 100))%")
+                            .font(.caption2)
+                            .foregroundColor(.accentColor)
+                            .fontWeight(.medium)
+                    }
+                }
+                
                 Spacer()
+                
+                // Play/Pause button in bottom right corner
+                Button(action: {
+                    viewModel.playVoiceNote(voiceNote)
+                }) {
+                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.accentColor)
+                        .scaleEffect(isPlaying ? 1.1 : 1.0)
+                        .animation(.easeInOut(duration: 0.2), value: isPlaying)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(12)
@@ -112,31 +156,8 @@ struct VoiceNoteCard: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
         .rotationEffect(.degrees(rotation))
-        .onTapGesture {
-            playVoiceNote()
-        }
         .onLongPressGesture {
             showContextMenu()
-        }
-    }
-    
-    private func playVoiceNote() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            isPlaying.toggle()
-        }
-        
-        // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
-        
-        // TODO: Implement actual audio playback
-        // For now, just simulate playback with animation
-        if isPlaying {
-            DispatchQueue.main.asyncAfter(deadline: .now() + voiceNote.duration) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isPlaying = false
-                }
-            }
         }
     }
     
@@ -159,7 +180,8 @@ struct VoiceNoteCard: View {
             transcription: ""
         ),
         index: 0,
-        isCurrentlyRecording: false
+        isCurrentlyRecording: false,
+        viewModel: VoiceNotesViewModel()
     )
     .padding()
 } 

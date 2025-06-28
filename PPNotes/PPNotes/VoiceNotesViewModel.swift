@@ -9,16 +9,21 @@ import Foundation
 import AVFoundation
 import SwiftUI
 import Combine
+import UIKit
 
 @MainActor
-class VoiceNotesViewModel: ObservableObject {
+class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var voiceNotes: [VoiceNote] = []
     @Published var isRecording = false
     @Published var recordingTime: TimeInterval = 0
     @Published var recordingTimer: Timer?
     @Published var isAddingNewNote = false
+    @Published var currentlyPlayingId: UUID?
+    @Published var playbackProgress: Double = 0
     
     private var audioRecorder: AVAudioRecorder?
+    private var audioPlayer: AVAudioPlayer?
+    private var playbackTimer: Timer?
     private let maxRecordingTime: TimeInterval = 180 // 3 minutes
     private let warningTime: TimeInterval = 10 // 10 seconds warning
     
@@ -40,7 +45,8 @@ class VoiceNotesViewModel: ObservableObject {
         return String(format: "%d:%02d", minutes, seconds)
     }
     
-    init() {
+    override init() {
+        super.init()
         setupAudioSession()
         loadVoiceNotes()
     }
@@ -172,5 +178,92 @@ class VoiceNotesViewModel: ObservableObject {
            let decoded = try? JSONDecoder().decode([VoiceNote].self, from: data) {
             voiceNotes = decoded
         }
+    }
+    
+    // MARK: - Playback Functions
+    
+    func playVoiceNote(_ voiceNote: VoiceNote) {
+        // If same note is playing, pause it
+        if currentlyPlayingId == voiceNote.id {
+            pausePlayback()
+            return
+        }
+        
+        // Stop any current playback
+        stopPlayback()
+        
+        // Get audio file URL
+        let audioURL = getDocumentsDirectory().appendingPathComponent(voiceNote.audioFileName)
+        
+        // Check if file exists
+        guard FileManager.default.fileExists(atPath: audioURL.path) else {
+            print("Audio file not found: \(audioURL.path)")
+            return
+        }
+        
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: audioURL)
+            audioPlayer?.delegate = self
+            audioPlayer?.prepareToPlay()
+            
+            currentlyPlayingId = voiceNote.id
+            playbackProgress = 0
+            
+            audioPlayer?.play()
+            startPlaybackTimer()
+            
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+            
+        } catch {
+            print("Error playing audio: \(error)")
+        }
+    }
+    
+    func pausePlayback() {
+        audioPlayer?.pause()
+        playbackTimer?.invalidate()
+        playbackTimer = nil
+    }
+    
+    func stopPlayback() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        playbackTimer?.invalidate()
+        playbackTimer = nil
+        currentlyPlayingId = nil
+        playbackProgress = 0
+    }
+    
+    private func startPlaybackTimer() {
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            Task { @MainActor in
+                guard let player = self.audioPlayer else { return }
+                
+                if player.isPlaying {
+                    self.playbackProgress = player.currentTime / player.duration
+                } else {
+                    self.stopPlayback()
+                }
+            }
+        }
+    }
+    
+    func getCurrentVoiceNote() -> VoiceNote? {
+        guard let playingId = currentlyPlayingId else { return nil }
+        return voiceNotes.first { $0.id == playingId }
+    }
+}
+
+// MARK: - AVAudioPlayerDelegate
+extension VoiceNotesViewModel: AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        stopPlayback()
+    }
+    
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        print("Audio player error: \(error?.localizedDescription ?? "Unknown error")")
+        stopPlayback()
     }
 } 

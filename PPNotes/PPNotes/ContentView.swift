@@ -45,7 +45,8 @@ struct ContentView: View {
                                         VoiceNoteCard(
                                             voiceNote: voiceNote, 
                                             index: index,
-                                            isCurrentlyRecording: false // No card animations during recording
+                                            isCurrentlyRecording: false, // No card animations during recording
+                                            viewModel: viewModel
                                         )
                                         .id(voiceNote.id)
                                         .transition(.asymmetric(
