@@ -19,6 +19,10 @@ struct VoiceNoteCard: View {
         viewModel.currentlyPlayingId == voiceNote.id
     }
     
+    private var isPaused: Bool {
+        viewModel.isNotePaused(voiceNote.id)
+    }
+    
     // Random slight rotation for staggered effect
     private var rotation: Double {
         let rotations: [Double] = [-5, -3, -1, 0, 1, 3, 5]
@@ -180,7 +184,7 @@ struct VoiceNoteCard: View {
                     Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .font(.title2)
                         .foregroundColor(.accentColor)
-                        .scaleEffect(isPlaying ? 1.1 : 1.0)
+                        .scaleEffect((isPlaying || isPaused) ? 1.1 : 1.0)
                         .animation(.easeInOut(duration: 0.2), value: isPlaying)
                 }
                 .buttonStyle(PlainButtonStyle())

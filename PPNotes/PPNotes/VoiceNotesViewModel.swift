@@ -23,6 +23,8 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var playbackProgress: Double = 0
     @Published var isTranscribing = false
     
+    private var pausedNoteId: UUID?
+    
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
     private var playbackTimer: Timer?
@@ -442,6 +444,12 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             return
         }
         
+        // If same note is paused, resume it
+        if pausedNoteId == voiceNote.id && audioPlayer != nil {
+            resumePlayback()
+            return
+        }
+        
         // Stop any current playback
         stopPlayback()
         
@@ -460,6 +468,7 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             audioPlayer?.prepareToPlay()
             
             currentlyPlayingId = voiceNote.id
+            pausedNoteId = nil
             playbackProgress = 0
             
             audioPlayer?.play()
@@ -471,6 +480,7 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             
         } catch {
             print("Error playing audio: \(error)")
+            stopPlayback()
         }
     }
     
@@ -478,6 +488,25 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         audioPlayer?.pause()
         playbackTimer?.invalidate()
         playbackTimer = nil
+        pausedNoteId = currentlyPlayingId
+        currentlyPlayingId = nil
+    }
+    
+    func resumePlayback() {
+        guard let player = audioPlayer,
+              let pausedId = pausedNoteId else {
+            stopPlayback()
+            return
+        }
+        
+        currentlyPlayingId = pausedId
+        pausedNoteId = nil
+        player.play()
+        startPlaybackTimer()
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
     }
     
     func stopPlayback() {
@@ -486,6 +515,7 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         playbackTimer?.invalidate()
         playbackTimer = nil
         currentlyPlayingId = nil
+        pausedNoteId = nil
         playbackProgress = 0
     }
     
@@ -506,6 +536,10 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     func getCurrentVoiceNote() -> VoiceNote? {
         guard let playingId = currentlyPlayingId else { return nil }
         return voiceNotes.first { $0.id == playingId }
+    }
+    
+    func isNotePaused(_ noteId: UUID) -> Bool {
+        return pausedNoteId == noteId
     }
 }
 
