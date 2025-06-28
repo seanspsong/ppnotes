@@ -68,9 +68,11 @@ struct ContentView: View {
                         
                         // Recording Button Area
                         VStack {
+                            Spacer()
+                                .frame(height: 40)
                             RecordingButton(viewModel: viewModel)
                         }
-                        .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
+                        .padding(.bottom, geometry.safeAreaInsets.bottom + 30)
                         .background(
                             // Semi-transparent background for button area
                             Color(.systemBackground)
@@ -80,8 +82,8 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("PPNotes")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("PPnotes")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: SettingsView()) {

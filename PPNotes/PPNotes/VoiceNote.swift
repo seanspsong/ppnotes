@@ -36,4 +36,29 @@ struct VoiceNote: Identifiable, Codable {
         formatter.dateStyle = .none
         return formatter.string(from: timestamp)
     }
+    
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: timestamp)
+    }
+    
+    var isToday: Bool {
+        Calendar.current.isDateInToday(timestamp)
+    }
+    
+    var isYesterday: Bool {
+        Calendar.current.isDateInYesterday(timestamp)
+    }
+    
+    var displayDate: String {
+        if isToday {
+            return "Today"
+        } else if isYesterday {
+            return "Yesterday"
+        } else {
+            return formattedDate
+        }
+    }
 } 

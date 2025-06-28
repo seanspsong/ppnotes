@@ -38,12 +38,19 @@ struct VoiceNoteCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Header with timestamp
+            // Header with date and time
             HStack {
                 Spacer()
-                Text(voiceNote.formattedTimestamp)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(voiceNote.displayDate)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fontWeight(.medium)
+                    
+                    Text(voiceNote.formattedTimestamp)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
             // Auto-generated title
