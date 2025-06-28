@@ -21,7 +21,6 @@ DerivedData/
 !default.mode2v3
 *.perspectivev3
 !default.perspectivev3
-
 ## Obj-C/Swift specific
 *.hmap
 
@@ -69,7 +68,6 @@ Carthage/Build/
 # Accio dependency management
 Dependencies/
 .accio/
-
 # fastlane
 #
 # It is recommended to not store the screenshots in the git repo.
@@ -87,4 +85,4 @@ fastlane/test_output
 # After new code Injection tools there's a generated folder /iOSInjectionProject
 # https://github.com/johnno1962/injectionforxcode
 
-iOSInjectionProject/ 
+iOSInjectionProject/
