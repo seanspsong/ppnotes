@@ -21,20 +21,42 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         // Voice Notes Grid
                         ScrollView {
-                            if viewModel.voiceNotes.isEmpty {
+                            if viewModel.voiceNotes.isEmpty && !viewModel.isAddingNewNote {
                                 emptyStateView
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                             } else {
-                                StaggeredGrid(
-                                    items: viewModel.voiceNotes,
-                                    spacing: 16,
-                                    columns: 2
-                                ) { voiceNote, index in
-                                    VoiceNoteCard(voiceNote: voiceNote, index: index)
-                                        .transition(.scale.combined(with: .opacity))
+                                LazyVStack(spacing: 16) {
+                                    // Recording/Processing card (shows while recording or processing)
+                                    if viewModel.isAddingNewNote {
+                                        HStack {
+                                            ProcessingCard(isRecording: viewModel.isRecording)
+                                                .transition(.scale.combined(with: .opacity))
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal, 16)
+                                    }
+                                    
+                                    // Existing voice notes
+                                    StaggeredGrid(
+                                        items: viewModel.voiceNotes,
+                                        spacing: 16,
+                                        columns: 2
+                                    ) { voiceNote, index in
+                                        VoiceNoteCard(
+                                            voiceNote: voiceNote, 
+                                            index: index,
+                                            isCurrentlyRecording: false // No card animations during recording
+                                        )
+                                        .id(voiceNote.id)
+                                        .transition(.asymmetric(
+                                            insertion: .scale.combined(with: .opacity),
+                                            removal: .scale.combined(with: .opacity)
+                                        ))
+                                        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.voiceNotes.count)
+                                    }
                                 }
                                 .padding(.top, 20)
-                                .animation(.easeInOut(duration: 0.3), value: viewModel.voiceNotes.count)
+                                .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.isAddingNewNote)
                             }
                         }
                         .refreshable {
@@ -95,6 +117,89 @@ struct ContentView: View {
             }
             
             Spacer()
+        }
+    }
+}
+
+// Processing Card shown while recording or creating new voice note
+struct ProcessingCard: View {
+    let isRecording: Bool
+    @State private var isAnimating = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header with status indicator
+            HStack {
+                Spacer()
+                HStack(spacing: 4) {
+                    Text(isRecording ? "Recording" : "Processing")
+                        .font(.caption)
+                        .foregroundColor(isRecording ? .red : .secondary)
+                    
+                    // Animated dots
+                    HStack(spacing: 2) {
+                        ForEach(0..<3) { index in
+                            Circle()
+                                .fill(isRecording ? Color.red : Color.secondary)
+                                .frame(width: 4, height: 4)
+                                .opacity(isAnimating ? 1.0 : 0.3)
+                                .animation(
+                                    .easeInOut(duration: 0.6)
+                                        .repeatForever()
+                                        .delay(Double(index) * 0.2),
+                                    value: isAnimating
+                                )
+                        }
+                    }
+                }
+            }
+            
+            // Status title
+            Text(isRecording ? "Recording..." : "Creating Voice Note...")
+                .font(.headline)
+                .foregroundColor(.primary)
+                .opacity(0.7)
+            
+            Spacer()
+            
+            // Animated waveform
+            HStack(spacing: 2) {
+                ForEach(0..<20, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(isRecording ? Color.red.opacity(0.7) : Color.accentColor.opacity(0.6))
+                        .frame(width: 2, height: 8)
+                        .scaleEffect(
+                            y: isAnimating ? CGFloat.random(in: 0.5...1.5) : 1.0
+                        )
+                        .animation(
+                            .easeInOut(duration: 0.8 + Double(index) * 0.1)
+                                .repeatForever(autoreverses: true),
+                            value: isAnimating
+                        )
+                }
+            }
+            .frame(height: 16)
+            
+            // Status message
+            HStack {
+                Text(isRecording ? "Hold to continue..." : "Processing...")
+                    .font(.footnote)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+        }
+        .padding(12)
+        .frame(width: 170, height: 130)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke((isRecording ? Color.red : Color.accentColor).opacity(0.3), lineWidth: 1)
+        )
+        .onAppear {
+            isAnimating = true
         }
     }
 }

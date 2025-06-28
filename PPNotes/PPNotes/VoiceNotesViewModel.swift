@@ -16,6 +16,7 @@ class VoiceNotesViewModel: ObservableObject {
     @Published var isRecording = false
     @Published var recordingTime: TimeInterval = 0
     @Published var recordingTimer: Timer?
+    @Published var isAddingNewNote = false
     
     private var audioRecorder: AVAudioRecorder?
     private let maxRecordingTime: TimeInterval = 180 // 3 minutes
@@ -57,6 +58,11 @@ class VoiceNotesViewModel: ObservableObject {
     func startRecording() {
         guard !isRecording else { return }
         
+        // Show processing card immediately when recording starts
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            isAddingNewNote = true
+        }
+        
         let audioURL = getDocumentsDirectory().appendingPathComponent("\(UUID().uuidString).m4a")
         
         let settings = [
@@ -80,6 +86,10 @@ class VoiceNotesViewModel: ObservableObject {
             startTimer()
         } catch {
             print("Could not start recording: \(error)")
+            // If recording fails, hide the processing card
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                isAddingNewNote = false
+            }
         }
     }
     
@@ -91,8 +101,14 @@ class VoiceNotesViewModel: ObservableObject {
         recordingTimer?.invalidate()
         recordingTimer = nil
         
-        if let audioURL = audioRecorder?.url {
+        if let audioURL = audioRecorder?.url, recordingTime > 0.5 {
+            // Only create voice note if recording is longer than 0.5 seconds
             createVoiceNote(from: audioURL, duration: recordingTime)
+        } else {
+            // If recording too short, just hide the processing card
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                isAddingNewNote = false
+            }
         }
         
         recordingTime = 0
@@ -131,8 +147,14 @@ class VoiceNotesViewModel: ObservableObject {
             transcription: ""
         )
         
-        voiceNotes.insert(voiceNote, at: 0)
-        saveVoiceNotes()
+        // Brief delay to show processing state, then replace processing card with actual voice note
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                self.voiceNotes.insert(voiceNote, at: 0)
+                self.isAddingNewNote = false
+            }
+            self.saveVoiceNotes()
+        }
     }
     
     private func getDocumentsDirectory() -> URL {

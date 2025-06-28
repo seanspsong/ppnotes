@@ -10,7 +10,9 @@ import SwiftUI
 struct VoiceNoteCard: View {
     let voiceNote: VoiceNote
     let index: Int
+    let isCurrentlyRecording: Bool
     @State private var isPlaying = false
+    @State private var animationTrigger = false
     
     // Random slight rotation for staggered effect
     private var rotation: Double {
@@ -26,6 +28,11 @@ struct VoiceNoteCard: View {
     
     private var cardHeight: CGFloat {
         let heights: [CGFloat] = [120, 140, 130, 150, 160]
+        return heights[index % heights.count]
+    }
+    
+    private func staticBarHeight(for index: Int) -> CGFloat {
+        let heights: [CGFloat] = [6, 10, 4, 12, 8, 5, 9, 7, 11, 6, 8, 4, 10, 9, 7, 5, 12, 6, 8, 10]
         return heights[index % heights.count]
     }
     
@@ -49,14 +56,39 @@ struct VoiceNoteCard: View {
             
             // Waveform visualization placeholder
             HStack(spacing: 2) {
-                ForEach(0..<20, id: \.self) { _ in
+                ForEach(0..<20, id: \.self) { barIndex in
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(isPlaying ? Color.accentColor : Color.secondary)
-                        .frame(width: 2, height: CGFloat.random(in: 4...12))
-                        .animation(.easeInOut(duration: 0.5).repeatForever(), value: isPlaying)
+                        .fill(isCurrentlyRecording ? Color.accentColor : Color.secondary)
+                        .frame(
+                            width: 2, 
+                            height: staticBarHeight(for: barIndex)
+                        )
+                        .scaleEffect(
+                            y: isCurrentlyRecording ? 
+                                (animationTrigger ? 1.5 : 0.5) : 1.0
+                        )
+                        .animation(
+                            isCurrentlyRecording ? 
+                                .easeInOut(duration: 0.6).repeatForever(autoreverses: true) : 
+                                .easeOut(duration: 0.3), 
+                            value: isCurrentlyRecording
+                        )
+                        .animation(
+                            isCurrentlyRecording ? 
+                                .easeInOut(duration: 0.8 + Double(barIndex) * 0.1).repeatForever(autoreverses: true) : 
+                                .none,
+                            value: animationTrigger
+                        )
                 }
             }
             .frame(height: 16)
+            .onChange(of: isCurrentlyRecording) { _, newValue in
+                if newValue {
+                    animationTrigger.toggle()
+                } else {
+                    animationTrigger = false
+                }
+            }
             
             // Duration badge
             HStack {
@@ -119,7 +151,8 @@ struct VoiceNoteCard: View {
             timestamp: Date(),
             transcription: ""
         ),
-        index: 0
+        index: 0,
+        isCurrentlyRecording: false
     )
     .padding()
 } 
