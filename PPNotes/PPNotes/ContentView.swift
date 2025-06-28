@@ -23,7 +23,7 @@ struct ContentView: View {
                         ScrollView {
                             if viewModel.voiceNotes.isEmpty && !viewModel.isAddingNewNote {
                                 emptyStateView
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .frame(maxWidth: .infinity, minHeight: geometry.size.height - 150)
                             } else {
                                 LazyVStack(spacing: 16) {
                                     // Recording/Processing card (shows while recording or processing)
@@ -57,6 +57,7 @@ struct ContentView: View {
                                     }
                                 }
                                 .padding(.top, 20)
+                                .padding(.bottom, 120) // Add bottom padding to prevent content being cut off
                                 .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.isAddingNewNote)
                             }
                         }
@@ -65,20 +66,18 @@ struct ContentView: View {
                             // TODO: Implement re-processing with latest LLM model
                         }
                         
-                        Spacer()
-                        
-                        // Recording Button Area
-                        VStack {
-                            Spacer()
-                                .frame(height: 40)
+                        // Recording Button Area - Fixed at bottom
+                        VStack(spacing: 8) {
                             RecordingButton(viewModel: viewModel)
                         }
-                        .padding(.bottom, geometry.safeAreaInsets.bottom + 30)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, max(geometry.safeAreaInsets.bottom, 20))
+                        .padding(.top, 12)
                         .background(
                             // Semi-transparent background for button area
                             Color(.systemBackground)
                                 .opacity(0.95)
-                                .blur(radius: 10)
+                                .background(.ultraThinMaterial)
                         )
                     }
                 }
