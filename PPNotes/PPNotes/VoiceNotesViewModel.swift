@@ -209,11 +209,15 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     // MARK: - Transcription Functions
     
     private func setupTranscriber() async throws {
-        // Check if models are available and get the best locale to use
-        let bestLocale = try await ensureModelsAvailable()
+        // Get user's preferred transcription language (default to device locale)
+        let preferredLocale = getPreferredTranscriptionLocale()
+        print("🎤 Using preferred locale: \(preferredLocale.identifier)")
+        
+        // Check if this locale is available and download if needed
+        try await ensureModelAvailable(for: preferredLocale)
         
         speechTranscriber = SpeechTranscriber(
-            locale: bestLocale,
+            locale: preferredLocale,
             transcriptionOptions: [],
             reportingOptions: [],
             attributeOptions: []
@@ -224,59 +228,59 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         }
         
         speechAnalyzer = SpeechAnalyzer(modules: [transcriber])
+        print("✅ SpeechTranscriber setup complete for \(preferredLocale.identifier)")
     }
     
-    private func ensureModelsAvailable() async throws -> Locale {
+    private func getPreferredTranscriptionLocale() -> Locale {
+        // Check if user has manually selected a preferred language
+        if let preferredLanguageCode = UserDefaults.standard.string(forKey: "PreferredTranscriptionLanguage") {
+            let preferredLocale = Locale(identifier: preferredLanguageCode)
+            print("🎤 Using user-selected language: \(preferredLanguageCode)")
+            return preferredLocale
+        }
+        
+        // Use device locale as default
+        print("🎤 Using device locale: \(Locale.current.identifier)")
+        return Locale.current
+    }
+    
+    private func ensureModelAvailable(for locale: Locale) async throws {
         let supportedLocales = await SpeechTranscriber.supportedLocales
         let installedLocales = await SpeechTranscriber.installedLocales
-        let currentLocale = Locale.current
         
-        print("Current device locale: \(currentLocale.identifier)")
-        print("Supported locales: \(supportedLocales.map { $0.identifier })")
-        print("Installed locales: \(installedLocales.map { $0.identifier })")
+        print("🎤 Checking availability for: \(locale.identifier)")
+        print("🎤 Supported locales: \(supportedLocales.map { $0.identifier })")
+        print("🎤 Installed locales: \(installedLocales.map { $0.identifier })")
         
-        // First try the current locale
-        if supportedLocales.contains(where: { $0.identifier == currentLocale.identifier }) {
-            if installedLocales.contains(where: { $0.identifier == currentLocale.identifier }) {
-                print("Using device locale: \(currentLocale.identifier)")
-                return currentLocale
-            } else {
-                print("Device locale supported but not installed: \(currentLocale.identifier)")
-            }
-        } else {
-            print("Device locale not supported: \(currentLocale.identifier)")
+        // Check if the locale is supported
+        let isSupported = supportedLocales.contains { supportedLocale in
+            supportedLocale.identifier == locale.identifier ||
+            supportedLocale.language.languageCode == locale.language.languageCode
         }
         
-        // Fall back to English (US) if current locale not supported
-        let englishLocale = Locale(identifier: "en-US")
-        if supportedLocales.contains(where: { $0.identifier == englishLocale.identifier }) {
-            if installedLocales.contains(where: { $0.identifier == englishLocale.identifier }) {
-                print("Falling back to English (US) for transcription")
-                return englishLocale
-            }
+        guard isSupported else {
+            print("❌ Locale \(locale.identifier) not supported")
+            throw TranscriptionError.localeNotSupported(locale.identifier)
         }
         
-        // Try any available English variant
-        let englishVariants = ["en-US", "en-GB", "en-AU", "en-IN"]
-        for variant in englishVariants {
-            let locale = Locale(identifier: variant)
-            if supportedLocales.contains(where: { $0.identifier == locale.identifier }) {
-                if installedLocales.contains(where: { $0.identifier == locale.identifier }) {
-                    print("Falling back to \(variant) for transcription")
-                    return locale
-                }
-            }
+        // Check if the model is already installed
+        let isInstalled = installedLocales.contains { installedLocale in
+            installedLocale.identifier == locale.identifier ||
+            installedLocale.language.languageCode == locale.language.languageCode
         }
         
-        // If no English variants available, try the first available locale
-        for supportedLocale in supportedLocales {
-            if installedLocales.contains(where: { $0.identifier == supportedLocale.identifier }) {
-                print("Using first available locale: \(supportedLocale.identifier)")
-                return supportedLocale
-            }
+        if isInstalled {
+            print("✅ Language model already installed for \(locale.identifier)")
+            return
         }
         
-        throw TranscriptionError.localeNotSupported
+        // If supported but not installed, we need to show an error or download
+        print("⚠️ Language model for \(locale.identifier) is supported but not installed")
+        print("💡 User needs to download language model in Settings")
+        
+        // For now, throw an error with helpful message
+        // In a production app, you might want to use AssetInventory to download automatically
+        throw TranscriptionError.modelsNotInstalled(locale.identifier)
     }
     
     private func transcribeAudio(audioURL: URL, voiceNoteId: UUID) async {
@@ -541,6 +545,73 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     func isNotePaused(_ noteId: UUID) -> Bool {
         return pausedNoteId == noteId
     }
+    
+    // MARK: - Language Selection Functions
+    
+    func setPreferredTranscriptionLanguage(_ languageCode: String) {
+        UserDefaults.standard.set(languageCode, forKey: "PreferredTranscriptionLanguage")
+        print("🎤 Set preferred transcription language to: \(languageCode)")
+    }
+    
+    func getAvailableLanguages() async -> [(String, String)] {
+        let supportedLocales = await SpeechTranscriber.supportedLocales
+        let installedLocales = await SpeechTranscriber.installedLocales
+        
+        // Common language mappings for user-friendly display
+        let languageNames: [String: String] = [
+            "en-US": "English (US)",
+            "en-GB": "English (UK)",
+            "en-AU": "English (Australia)",
+            "en-IN": "English (India)",
+            "zh-CN": "Chinese (Simplified)",
+            "zh-TW": "Chinese (Traditional)",
+            "zh-Hans": "Chinese (Simplified)",
+            "zh-Hant": "Chinese (Traditional)",
+            "ja-JP": "Japanese",
+            "ko-KR": "Korean",
+            "fr-FR": "French",
+            "de-DE": "German",
+            "es-ES": "Spanish",
+            "it-IT": "Italian",
+            "pt-BR": "Portuguese (Brazil)"
+        ]
+        
+        var availableLanguages: [(String, String)] = []
+        
+        // Add installed languages first (these work immediately)
+        for locale in installedLocales {
+            let identifier = locale.identifier
+            let displayName = languageNames[identifier] ?? locale.localizedString(forLanguageCode: locale.language.languageCode?.identifier ?? identifier) ?? identifier
+            availableLanguages.append((identifier, "✅ \(displayName)"))
+        }
+        
+        // Add supported but not installed languages
+        for locale in supportedLocales {
+            let identifier = locale.identifier
+            if !installedLocales.contains(where: { $0.identifier == identifier }) {
+                let displayName = languageNames[identifier] ?? locale.localizedString(forLanguageCode: locale.language.languageCode?.identifier ?? identifier) ?? identifier
+                availableLanguages.append((identifier, "📥 \(displayName) (Download Required)"))
+            }
+        }
+        
+        return availableLanguages.sorted { $0.1 < $1.1 }
+    }
+    
+    func getCurrentTranscriptionLanguage() -> String {
+        return getPreferredTranscriptionLocale().identifier
+    }
+    
+    func switchToChineseSimplified() {
+        setPreferredTranscriptionLanguage("zh-CN")
+    }
+    
+    func switchToChineseTraditional() {
+        setPreferredTranscriptionLanguage("zh-TW")
+    }
+    
+    func switchToEnglish() {
+        setPreferredTranscriptionLanguage("en-US")
+    }
 }
 
 // MARK: - AVAudioPlayerDelegate
@@ -558,20 +629,20 @@ extension VoiceNotesViewModel: AVAudioPlayerDelegate {
 // MARK: - Transcription Errors
 enum TranscriptionError: Error, LocalizedError {
     case failedToSetup
-    case localeNotSupported
-    case modelsNotInstalled
+    case localeNotSupported(String)
+    case modelsNotInstalled(String)
     case transcriptionFailed
     
     var errorDescription: String? {
         switch self {
         case .failedToSetup:
             return "Failed to setup speech transcriber"
-        case .localeNotSupported:
-            return "No supported languages available for transcription. Please ensure iOS 26 speech models are installed."
-        case .modelsNotInstalled:
-            return "Speech recognition models not installed. Please download language models in Settings > General > Keyboard & Dictation."
+        case .localeNotSupported(let language):
+            return "Language '\(language)' is not supported for transcription on this device. Supported languages include English, Chinese (Simplified), French, German, Italian, Japanese, Korean, Portuguese (Brazil), and Spanish."
+        case .modelsNotInstalled(let language):
+            return "Language model for '\(language)' is not installed. To use Chinese transcription:\n\n1. Go to Settings > General > Keyboards\n2. Add Chinese keyboards if not already added\n3. Or try switching the app language to Chinese and restart\n\nAlternatively, you can record in English which should work immediately."
         case .transcriptionFailed:
-            return "Transcription process failed"
+            return "Transcription process failed. Please try recording again."
         }
     }
 }
