@@ -8,8 +8,8 @@
 
 /* Begin PBXFileReference section */
 		5A649DC32E10172B00959627 /* PPNotes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PPNotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		5A649DD12E10172C00959628 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = ../README.md; sourceTree = "<group>"; };
-		5A649DD22E10172C00959629 /* VibeLog.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = ../VibeLog.md; sourceTree = "<group>"; };
+		5A649DD12E10172C00959628 /* ../README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = ../README.md; sourceTree = "<group>"; };
+		5A649DD22E10172C00959629 /* ../VibeLog.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = ../VibeLog.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,8 +34,8 @@
 		5A649DBA2E10172B00959627 = {
 			isa = PBXGroup;
 			children = (
-				5A649DD12E10172C00959628 /* README.md */,
-				5A649DD22E10172C00959629 /* VibeLog.md */,
+				5A649DD12E10172C00959628 /* ../README.md */,
+				5A649DD22E10172C00959629 /* ../VibeLog.md */,
 				5A649DC52E10172B00959627 /* PPNotes */,
 				5A649DC42E10172B00959627 /* Products */,
 			);
