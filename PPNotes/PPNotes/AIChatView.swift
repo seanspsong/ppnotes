@@ -104,7 +104,7 @@ struct AIChatView: View {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         if messages.isEmpty {
                             VStack(spacing: 16) {
-                                Image(systemName: "brain.head.profile")
+                                Image(systemName: "lightbulb")
                                     .font(.system(size: 50))
                                     .foregroundColor(.accentColor)
                                 Text("Chat about your voice note")
