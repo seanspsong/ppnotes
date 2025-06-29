@@ -28,7 +28,7 @@ struct ContentView: View {
                         ScrollView {
                             if viewModel.voiceNotes.isEmpty && !viewModel.isAddingNewNote {
                                 emptyStateView
-                                    .frame(maxWidth: .infinity, minHeight: geometry.size.height - 150)
+                                    .frame(maxWidth: .infinity, minHeight: geometry.size.height - 200)
                             } else {
                                 LazyVStack(spacing: 16) {
                                     // Recording/Processing card (shows while recording or processing)
@@ -42,31 +42,36 @@ struct ContentView: View {
                                     }
                                     
                                     // Existing voice notes
-                                    StaggeredGrid(
-                                        items: viewModel.voiceNotes,
-                                        spacing: 16,
-                                        columns: 2
-                                    ) { voiceNote, index in
-                                        VoiceNoteCard(
-                                            voiceNote: voiceNote, 
-                                            index: index,
-                                            isCurrentlyRecording: false, // No card animations during recording
-                                            viewModel: viewModel
-                                        )
-                                        .id(voiceNote.id)
-                                        .transition(.asymmetric(
-                                            insertion: .scale.combined(with: .opacity),
-                                            removal: .scale.combined(with: .opacity)
-                                        ))
-                                        .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
+                                    GeometryReader { geometry in
+                                        StaggeredGrid(
+                                            items: viewModel.voiceNotes,
+                                            spacing: 16,
+                                            columns: 2
+                                        ) { voiceNote, index in
+                                            VoiceNoteCard(
+                                                voiceNote: voiceNote, 
+                                                index: index,
+                                                isCurrentlyRecording: false, // No card animations during recording
+                                                screenWidth: geometry.size.width,
+                                                viewModel: viewModel
+                                            )
+                                            .id(voiceNote.id)
+                                            .transition(.asymmetric(
+                                                insertion: .scale.combined(with: .opacity),
+                                                removal: .scale.combined(with: .opacity)
+                                            ))
+                                            .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
+                                        }
                                     }
+                                    .frame(height: CGFloat(ceil(Double(viewModel.voiceNotes.count) / 2.0)) * 250)
                                 }
                                 .padding(.top, 20)
-                                .padding(.bottom, 120) // Add bottom padding to prevent content being cut off
+                                .padding(.bottom, 140) // Increased bottom padding to prevent clipping
                                 .animation(.spring(response: 1.0, dampingFraction: 0.85), value: viewModel.isAddingNewNote)
                                 .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
                             }
                         }
+                        .clipped() // Prevent content from overflowing
                         .refreshable {
                             // Pull to refresh functionality
                             // TODO: Implement re-processing with latest LLM model
@@ -86,6 +91,7 @@ struct ContentView: View {
                                 .background(.ultraThinMaterial)
                         )
                     }
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
             }
             .navigationTitle("PPnotes")

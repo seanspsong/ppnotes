@@ -33,6 +33,7 @@ struct StaggeredGrid<Content: View, T: Identifiable>: View {
                         let itemIndex = rowIndex + columnIndex
                         if itemIndex < items.count {
                             content(items[itemIndex], itemIndex)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             Spacer()
                         }

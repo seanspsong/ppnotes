@@ -12,6 +12,7 @@ struct VoiceNoteCard: View {
     let voiceNote: VoiceNote
     let index: Int
     let isCurrentlyRecording: Bool
+    let screenWidth: CGFloat
     @ObservedObject var viewModel: VoiceNotesViewModel
     @State private var animationTrigger = false
     @State private var shakeOffset: CGFloat = 0
@@ -30,14 +31,22 @@ struct VoiceNoteCard: View {
         return rotations[index % rotations.count]
     }
     
-    // Variable card dimensions as per design
-    private var cardWidth: CGFloat {
-        let widths: [CGFloat] = [150, 170, 160, 180, 200]
-        return widths[index % widths.count]
+    // Responsive card width based on screen size
+    private func cardWidth(for screenWidth: CGFloat) -> CGFloat {
+        // Calculate available width for 2 columns with spacing and padding
+        let totalSpacing: CGFloat = 16 + 32 // grid spacing + StaggeredGrid horizontal padding
+        let availableWidth = screenWidth - totalSpacing
+        let baseWidth = availableWidth / 2
+        
+        // Add slight variation for staggered effect
+        let variations: [CGFloat] = [-6, 3, -3, 6, 0]
+        let variation = variations[index % variations.count]
+        
+        return max(140, baseWidth + variation) // Minimum width of 140
     }
     
     private var cardHeight: CGFloat {
-        let heights: [CGFloat] = [120, 140, 130, 150, 160]
+        let heights: [CGFloat] = [180, 200, 190, 210, 220]
         return heights[index % heights.count]
     }
     
@@ -57,7 +66,7 @@ struct VoiceNoteCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             // Header with date and time
             HStack {
                 Spacer()
@@ -88,9 +97,9 @@ struct VoiceNoteCard: View {
                 Text(voiceNote.transcription)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 2)
             } else if viewModel.isTranscribing {
                 HStack(spacing: 4) {
                     Text("Transcribing...")
@@ -113,7 +122,7 @@ struct VoiceNoteCard: View {
                         }
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
                 .onAppear {
                     animationTrigger = true
                 }
@@ -160,6 +169,8 @@ struct VoiceNoteCard: View {
                 }
             }
             
+            Spacer(minLength: 8)
+            
             // Duration badge with playback progress and play button
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -191,8 +202,8 @@ struct VoiceNoteCard: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .padding(12)
-        .frame(width: cardWidth, height: cardHeight)
+        .padding(14)
+        .frame(width: cardWidth(for: screenWidth), height: cardHeight)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
@@ -267,6 +278,7 @@ struct VoiceNoteCard: View {
         ),
         index: 0,
         isCurrentlyRecording: false,
+        screenWidth: UIScreen.main.bounds.width,
         viewModel: VoiceNotesViewModel()
     )
     .padding()
