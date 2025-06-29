@@ -160,6 +160,9 @@ Following Apple Human Interface Guidelines, PPNotes prioritizes **simplicity**, 
 
 ### Color Palette
 - **Primary**: iOS System Accent Color (user customizable)
+- **Current Theme**: Purple #8A2BE2 (BlueViolet)
+  - Light Mode: RGB(138, 43, 226) = (0.541, 0.169, 0.886)
+  - Dark Mode: RGB(153, 56, 235) = (0.600, 0.220, 0.920)
 - **Recording State**: System Red with 80% opacity
 - **Background**: iOS System Background (adaptive for light/dark mode)
 - **Cards**: iOS Secondary System Background
