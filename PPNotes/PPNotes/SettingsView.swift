@@ -13,8 +13,7 @@ struct SettingsView: View {
     @State private var currentLanguage: SupportedLanguage = .english
     
     var body: some View {
-        NavigationView {
-            List {
+        List {
                 // Language Section
                 Section {
                     Button(action: {
@@ -125,7 +124,6 @@ struct SettingsView: View {
                     .fontWeight(.semibold)
                 }
             }
-        }
         .sheet(isPresented: $showLanguageSelection) {
             LanguageSelectionView(showLanguageSelection: $showLanguageSelection, isOnboarding: false)
         }

@@ -31,10 +31,8 @@ struct RecordingButton: View {
     private var buttonColor: Color {
         if viewModel.isDeleteMode {
             return Color.secondary.opacity(0.3)
-        } else if viewModel.isRecording {
-            return Color.accentColor
         } else {
-            return Color.accentColor.opacity(0.7)
+            return Color.accentColor // Full theme color for both states
         }
     }
     
@@ -71,7 +69,7 @@ struct RecordingButton: View {
                     // Waveform ring (only when recording)
                     if viewModel.isRecording {
                         Circle()
-                            .stroke(Color.accentColor.opacity(0.3), lineWidth: 4)
+                            .stroke(Color.accentColor.opacity(0.4), lineWidth: 4)
                             .frame(width: currentButtonSize + 20, height: currentButtonSize + 20)
                             .scaleEffect(waveformScale)
                             .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: waveformScale)

@@ -98,17 +98,17 @@ struct ContentView: View {
                     }
                 }
             }
+            .overlay(
+                // Floating Recording Button (only on main content)
+                VStack {
+                    Spacer()
+                    RecordingButton(viewModel: viewModel)
+                        .padding(.bottom, 34) // Space from bottom edge
+                }
+                .ignoresSafeArea(.keyboard, edges: .bottom)
+            )
         }
         .preferredColorScheme(nil) // Adaptive to system
-        .overlay(
-            // Floating Recording Button
-            VStack {
-                Spacer()
-                RecordingButton(viewModel: viewModel)
-                    .padding(.bottom, 34) // Space from bottom edge
-            }
-            .ignoresSafeArea(.keyboard, edges: .bottom)
-        )
         .overlay(
             // Card overlay for voice note detail (top layer)
             Group {
