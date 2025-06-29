@@ -226,50 +226,7 @@ struct ProcessingCard: View {
     }
 }
 
-// Placeholder Settings View
-struct SettingsView: View {
-    var body: some View {
-        List {
-            Section("Recording") {
-                HStack {
-                    Text("Recording Quality")
-                    Spacer()
-                    Text("High")
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            Section("Transcription") {
-                HStack {
-                    Text("Language")
-                    Spacer()
-                    Text("English")
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            Section("Privacy") {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("All data stays on device")
-                }
-                .foregroundColor(.secondary)
-            }
-            
-            Section("About") {
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text("1.0")
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
+
 
 #Preview {
     ContentView()
