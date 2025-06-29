@@ -26,6 +26,8 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var selectedNoteForDetail: VoiceNote?
     @Published var isGeneratingTitle = false
     @Published var titleGenerationProgress: Double = 0.0
+    @Published var sourceCardFrame: CGRect = .zero
+    @Published var animateFromSource = false
     
     private var pausedNoteId: UUID?
     

@@ -10,6 +10,7 @@ import SwiftUI
 struct VoiceNoteDetailView: View {
     let voiceNote: VoiceNote
     @ObservedObject var viewModel: VoiceNotesViewModel
+    @Environment(\.dismiss) private var dismiss
     
     private var isPlaying: Bool {
         viewModel.currentlyPlayingId == voiceNote.id
@@ -20,7 +21,39 @@ struct VoiceNoteDetailView: View {
     }
     
     var body: some View {
-        ScrollView {
+        VStack(spacing: 0) {
+            // Card header with close button
+            HStack {
+                Text("Voice Note")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button(action: {
+                    print("🎬 Close button tapped, dismissing...")
+                    withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                        viewModel.animateFromSource = false
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        viewModel.selectedNoteForDetail = nil
+                    }
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(Color(.systemBackground))
+            
+            Divider()
+            
+            ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Header with date and time
                 VStack(alignment: .leading, spacing: 8) {
@@ -196,17 +229,11 @@ struct VoiceNoteDetailView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-        }
-        .navigationTitle("Voice Note")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    viewModel.selectedNoteForDetail = nil
-                }
-                .fontWeight(.medium)
             }
         }
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
     }
 }
 

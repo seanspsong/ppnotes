@@ -114,12 +114,55 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(nil) // Adaptive to system
-        .sheet(item: $viewModel.selectedNoteForDetail) { voiceNote in
-            NavigationView {
-                VoiceNoteDetailView(voiceNote: voiceNote, viewModel: viewModel)
+        .overlay(
+            // Card overlay for voice note detail
+            Group {
+                if let selectedNote = viewModel.selectedNoteForDetail {
+                    GeometryReader { screenGeometry in
+                        ZStack {
+                            // Semi-transparent background
+                            Color.black.opacity(0.3)
+                                .ignoresSafeArea()
+                                .onTapGesture {
+                                    print("🎬 Dismissing detail view...")
+                                    withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                                        viewModel.animateFromSource = false
+                                    }
+                                    
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                        viewModel.selectedNoteForDetail = nil
+                                    }
+                                }
+                            
+                            // Card view with zoom-from-source animation
+                            VoiceNoteDetailView(voiceNote: selectedNote, viewModel: viewModel)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 40)
+                                .scaleEffect(viewModel.animateFromSource ? 1.0 : 0.3)
+                                .offset(
+                                    x: viewModel.animateFromSource ? 0 : 
+                                        (viewModel.sourceCardFrame.midX - screenGeometry.size.width / 2),
+                                    y: viewModel.animateFromSource ? 0 : 
+                                        (viewModel.sourceCardFrame.midY - screenGeometry.size.height / 2)
+                                )
+                                .onAppear {
+                                    print("🎬 Detail view appeared, animateFromSource: \(viewModel.animateFromSource)")
+                                    print("🎬 Source frame: \(viewModel.sourceCardFrame)")
+                                    
+                                    // Small delay to ensure the initial state is visible
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        print("🎬 Starting zoom animation...")
+                                        withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                                            viewModel.animateFromSource = true
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                    .transition(.opacity)
+                }
             }
-            .presentationDetents([.large])
-        }
+        )
     }
     
     private var emptyStateView: some View {

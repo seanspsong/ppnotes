@@ -66,13 +66,22 @@ struct VoiceNoteCard: View {
     }
     
     var body: some View {
-        Button(action: {
-            if !viewModel.isDeleteMode {
-                // Show detail view
-                viewModel.selectedNoteForDetail = voiceNote
+        GeometryReader { geometry in
+            Button(action: {
+                if !viewModel.isDeleteMode {
+                    // Capture the card's position in global coordinates
+                    let globalFrame = geometry.frame(in: .global)
+                    viewModel.sourceCardFrame = globalFrame
+                    
+                    // Reset animation state and then show detail view
+                    viewModel.animateFromSource = false
+                    viewModel.selectedNoteForDetail = voiceNote
+                    
+                    print("🎯 Tapped card at position: \(globalFrame)")
+                }
+            }) {
+                cardContent
             }
-        }) {
-            cardContent
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(viewModel.isDeleteMode) // Disable navigation during delete mode
