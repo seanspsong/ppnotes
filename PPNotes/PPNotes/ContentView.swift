@@ -136,9 +136,14 @@ struct ContentView: View {
                             
                             // Card view with zoom-from-source animation
                             VoiceNoteDetailView(voiceNote: selectedNote, viewModel: viewModel)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 40)
+                                .frame(
+                                    width: viewModel.animateFromSource ? 
+                                        (screenGeometry.size.width - 40) : viewModel.sourceCardFrame.width,
+                                    height: viewModel.animateFromSource ? 
+                                        (screenGeometry.size.height - 80) : viewModel.sourceCardFrame.height
+                                )
                                 .scaleEffect(viewModel.animateFromSource ? 1.0 : 0.3)
+                                .opacity(viewModel.animateFromSource ? 1.0 : 0.5)
                                 .offset(
                                     x: viewModel.animateFromSource ? 0 : 
                                         (viewModel.sourceCardFrame.midX - screenGeometry.size.width / 2),

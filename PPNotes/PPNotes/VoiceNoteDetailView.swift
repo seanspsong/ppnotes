@@ -227,8 +227,8 @@ struct VoiceNoteDetailView: View {
                 
                 Spacer(minLength: 20)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, viewModel.animateFromSource ? 20 : 12)
+            .padding(.vertical, viewModel.animateFromSource ? 16 : 8)
             }
         }
         .background(Color(.secondarySystemBackground))
