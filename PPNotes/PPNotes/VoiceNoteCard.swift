@@ -67,24 +67,30 @@ struct VoiceNoteCard: View {
     
     var body: some View {
         GeometryReader { geometry in
-            Button(action: {
-                if !viewModel.isDeleteMode {
-                    // Capture the card's position in global coordinates
-                    let globalFrame = geometry.frame(in: .global)
-                    viewModel.sourceCardFrame = globalFrame
-                    
-                    // Reset animation state and then show detail view
-                    viewModel.animateFromSource = false
-                    viewModel.selectedNoteForDetail = voiceNote
-                    
-                    print("🎯 Tapped card at position: \(globalFrame)")
-                }
-            }) {
-                cardContent
-            }
+            cardContent
+                .contentShape(Rectangle())
+                .simultaneousGesture(
+                    viewModel.isDeleteMode ? nil : TapGesture()
+                        .onEnded {
+                            // Capture the card's position in global coordinates
+                            let globalFrame = geometry.frame(in: .global)
+                            viewModel.sourceCardFrame = globalFrame
+                            
+                            // Reset animation state and then show detail view
+                            viewModel.animateFromSource = false
+                            viewModel.selectedNoteForDetail = voiceNote
+                            
+                            print("🎯 Tapped card at position: \(globalFrame)")
+                        }
+                )
+                .simultaneousGesture(
+                    viewModel.isDeleteMode ? nil : LongPressGesture(minimumDuration: 0.5)
+                        .onEnded { _ in
+                            print("🗑️ Long press detected, entering delete mode")
+                            viewModel.enterDeleteMode()
+                        }
+                )
         }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(viewModel.isDeleteMode) // Disable navigation during delete mode
         .padding(14)
         .frame(width: cardWidth(for: screenWidth), height: cardHeight)
         .background(Color(.secondarySystemBackground))
@@ -114,7 +120,7 @@ struct VoiceNoteCard: View {
                         }
                         Spacer()
                     }
-                    .transition(.scale.combined(with: .opacity))
+                    .transition(.opacity)
                 }
             }
         )
@@ -125,11 +131,6 @@ struct VoiceNoteCard: View {
                 startShaking()
             } else {
                 stopShaking()
-            }
-        }
-        .onLongPressGesture {
-            if !viewModel.isDeleteMode {
-                viewModel.enterDeleteMode()
             }
         }
     }
@@ -165,17 +166,17 @@ struct VoiceNoteCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: "brain.head.profile")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.accentColor)
                             .opacity(0.7)
                         
                         // Progress indicator
                         if viewModel.titleGenerationProgress > 0 {
                             ProgressView(value: viewModel.titleGenerationProgress)
-                                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                                .progressViewStyle(LinearProgressViewStyle(tint: .accentColor))
                                 .frame(width: 25, height: 2)
                         } else {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
                                 .scaleEffect(0.5)
                         }
                     }
