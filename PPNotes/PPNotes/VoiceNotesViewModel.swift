@@ -23,6 +23,7 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var playbackProgress: Double = 0
     @Published var isTranscribing = false
     @Published var isDeleteMode = false
+    @Published var selectedNoteForDetail: VoiceNote?
     
     private var pausedNoteId: UUID?
     

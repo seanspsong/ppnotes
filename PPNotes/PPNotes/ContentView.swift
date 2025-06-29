@@ -114,6 +114,12 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(nil) // Adaptive to system
+        .sheet(item: $viewModel.selectedNoteForDetail) { voiceNote in
+            NavigationView {
+                VoiceNoteDetailView(voiceNote: voiceNote, viewModel: viewModel)
+            }
+            .presentationDetents([.large])
+        }
     }
     
     private var emptyStateView: some View {

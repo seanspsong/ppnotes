@@ -66,6 +66,66 @@ struct VoiceNoteCard: View {
     }
     
     var body: some View {
+        Button(action: {
+            if !viewModel.isDeleteMode {
+                // Show detail view
+                viewModel.selectedNoteForDetail = voiceNote
+            }
+        }) {
+            cardContent
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(viewModel.isDeleteMode) // Disable navigation during delete mode
+        .padding(14)
+        .frame(width: cardWidth(for: screenWidth), height: cardHeight)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .rotationEffect(.degrees(rotation))
+        .offset(x: shakeOffset)
+        .overlay(
+            // Delete button overlay
+            Group {
+                if viewModel.isDeleteMode {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                viewModel.deleteVoiceNote(voiceNote)
+                            }) {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.red)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                            }
+                            .scaleEffect(1.2)
+                            .offset(x: 8, y: -8)
+                        }
+                        Spacer()
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+        )
+        .scaleEffect(viewModel.isDeleteMode ? 0.95 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isDeleteMode)
+        .onChange(of: viewModel.isDeleteMode) { _, isDeleteMode in
+            if isDeleteMode {
+                startShaking()
+            } else {
+                stopShaking()
+            }
+        }
+        .onLongPressGesture {
+            if !viewModel.isDeleteMode {
+                viewModel.enterDeleteMode()
+            }
+        }
+    }
+    
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             // Header with date and time
             HStack {
@@ -200,53 +260,6 @@ struct VoiceNoteCard: View {
                         .animation(.easeInOut(duration: 0.2), value: isPlaying)
                 }
                 .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .padding(14)
-        .frame(width: cardWidth(for: screenWidth), height: cardHeight)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-        .rotationEffect(.degrees(rotation))
-        .offset(x: shakeOffset)
-        .overlay(
-            // Delete button overlay
-            Group {
-                if viewModel.isDeleteMode {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                viewModel.deleteVoiceNote(voiceNote)
-                            }) {
-                                Image(systemName: "minus.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.red)
-                                    .background(Color.white)
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-                            }
-                            .scaleEffect(1.2)
-                            .offset(x: 8, y: -8)
-                        }
-                        Spacer()
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                }
-            }
-        )
-        .scaleEffect(viewModel.isDeleteMode ? 0.95 : 1.0)
-        .animation(.easeInOut(duration: 0.2), value: viewModel.isDeleteMode)
-        .onChange(of: viewModel.isDeleteMode) { _, isDeleteMode in
-            if isDeleteMode {
-                startShaking()
-            } else {
-                stopShaking()
-            }
-        }
-        .onLongPressGesture {
-            if !viewModel.isDeleteMode {
-                viewModel.enterDeleteMode()
             }
         }
     }
