@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = VoiceNotesViewModel()
+    @State private var currentLanguageFlag: String = "🇺🇸" // Default to English
     
     var body: some View {
         NavigationView {
@@ -92,8 +93,8 @@ struct ContentView: View {
                         .foregroundColor(.accentColor)
                     } else {
                         NavigationLink(destination: SettingsView()) {
-                            Image(systemName: "gear")
-                                .foregroundColor(.primary)
+                            Text(currentLanguageFlag)
+                                .font(.title2)
                         }
                     }
                 }
@@ -109,6 +110,12 @@ struct ContentView: View {
             )
         }
         .preferredColorScheme(nil) // Adaptive to system
+        .onAppear {
+            loadCurrentLanguageFlag()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            loadCurrentLanguageFlag()
+        }
         .overlay(
             // Card overlay for voice note detail (top layer)
             Group {
@@ -163,6 +170,32 @@ struct ContentView: View {
                 }
             }
         )
+    }
+    
+    private func loadCurrentLanguageFlag() {
+        let languageCode = UserDefaults.standard.string(forKey: "PreferredTranscriptionLanguage") ?? "en-US"
+        
+        // Map language codes to flags (same as SupportedLanguage enum)
+        switch languageCode {
+        case "en-US", "en-GB", "en-AU", "en-IN":
+            currentLanguageFlag = "🇺🇸"
+        case "ja-JP":
+            currentLanguageFlag = "🇯🇵"
+        case "zh-CN", "zh-Hans", "zh-Hans-CN":
+            currentLanguageFlag = "🇨🇳"
+        case "zh-TW", "zh-Hant", "zh-Hant-TW":
+            currentLanguageFlag = "🇹🇼"
+        case "it-IT":
+            currentLanguageFlag = "🇮🇹"
+        case "de-DE":
+            currentLanguageFlag = "🇩🇪"
+        case "fr-FR":
+            currentLanguageFlag = "🇫🇷"
+        case "es-ES":
+            currentLanguageFlag = "🇪🇸"
+        default:
+            currentLanguageFlag = "🇺🇸" // Default to English
+        }
     }
     
     private var emptyStateView: some View {

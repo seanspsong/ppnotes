@@ -109,16 +109,16 @@ class TitleGenerationService: ObservableObject {
             // Create a session with specific instructions for title generation
             let session = LanguageModelSession(
                 instructions: """
-                You are a helpful assistant that generates concise, meaningful titles for voice notes. 
-                Create titles that are 8-10 words maximum and capture the main topic or action. 
+                You are a helpful assistant that generates highlevel and brief titles for voice notes. 
+                Create titles that are 1-7 words maximum and summarize the main topic. 
                 Avoid generic words like "note", "recording", "voice". 
                 Focus on the key content and make it specific and informative.
                 """
             )
             
             let prompt = """
-            Generate a short, descriptive title for this voice note transcription. 
-            The title should be concise (8-10 words max) and capture the main topic or action.
+            Generate a short, brief title for this voice note transcription. 
+            The title should be highlevel (1-7 words max) and brief the content.
             
             Transcription: "\(inputText)"
             

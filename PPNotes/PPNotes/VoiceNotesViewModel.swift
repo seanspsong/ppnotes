@@ -91,7 +91,7 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             isAddingNewNote = true
         }
         
-        let audioURL = getDocumentsDirectory().appendingPathComponent("\(UUID().uuidString).m4a")
+        let audioURL = getDocumentsDirectory().appendingPathComponent(generateUniqueFileName())
         
         let settings = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
@@ -708,6 +708,33 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     
     private func getDocumentsDirectory() -> URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+    
+    private func generateUniqueFileName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-HHmm"
+        let dateTimeString = formatter.string(from: Date())
+        
+        let baseFileName = "ppnotes-\(dateTimeString)"
+        let documentsDir = getDocumentsDirectory()
+        
+        // Find the next available counter (starting from 01)
+        var counter = 1
+        var fileName: String
+        
+        repeat {
+            let counterString = String(format: "%02d", counter)
+            fileName = "\(baseFileName)-rec\(counterString).m4a"
+            let fileURL = documentsDir.appendingPathComponent(fileName)
+            
+            if !FileManager.default.fileExists(atPath: fileURL.path) {
+                break
+            }
+            
+            counter += 1
+        } while counter <= 999 // Safety limit
+        
+        return fileName
     }
     
     private func saveVoiceNotes() {
