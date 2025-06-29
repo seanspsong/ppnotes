@@ -491,7 +491,13 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             // Collect all transcription results
             async let transcriptionFuture = transcriber.results
                 .reduce(into: "") { result, transcriptionResult in
-                    result += transcriptionResult.text.description
+                    let textContent = String(transcriptionResult.text.characters)
+                    print("🎤 Raw transcription segment: '\(textContent)'")
+                    // Filter out any malformed content that might contain braces
+                    let cleanText = textContent.filter { !"{|}".contains($0) }
+                    if !cleanText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        result += cleanText + " "
+                    }
                 }
             
             // Start analyzing the audio file
@@ -501,7 +507,9 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
                 await analyzer.cancelAndFinishNow()
             }
             
-            return try await transcriptionFuture
+            let finalResult = try await transcriptionFuture
+            print("🎤 SpeechTranscriber final result: '\(finalResult)'")
+            return finalResult.trimmingCharacters(in: .whitespacesAndNewlines)
             
         } catch {
             // Only log unexpected errors, not format compatibility issues
@@ -541,7 +549,13 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
                 }
                 
                 if result.isFinal {
-                    continuation.resume(returning: result.bestTranscription.formattedString)
+                    let transcriptionText = result.bestTranscription.formattedString
+                    print("🎤 SFSpeechRecognizer raw result: '\(transcriptionText)'")
+                    // Clean any potential formatting artifacts
+                    let cleanText = transcriptionText.filter { !"{|}".contains($0) }
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    print("🎤 SFSpeechRecognizer cleaned result: '\(cleanText)'")
+                    continuation.resume(returning: cleanText.isEmpty ? "Unable to transcribe" : cleanText)
                 }
             }
         }
