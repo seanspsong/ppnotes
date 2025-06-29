@@ -11,6 +11,7 @@ struct VoiceNoteDetailView: View {
     let voiceNote: VoiceNote
     @ObservedObject var viewModel: VoiceNotesViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showingAIChat = false
     
     private var isPlaying: Bool {
         viewModel.currentlyPlayingId == voiceNote.id
@@ -193,6 +194,45 @@ struct VoiceNoteDetailView: View {
                     )
                 }
                 
+                // AI Chat button
+                Button(action: {
+                    showingAIChat = true
+                }) {
+                    HStack {
+                        Image(systemName: "ellipsis.bubble")
+                            .font(.title3)
+                        Text("Chat with AI about this note")
+                            .font(.headline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                    .foregroundColor(.accentColor)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.accentColor.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(voiceNote.transcription.isEmpty)
+                .opacity(voiceNote.transcription.isEmpty ? 0.5 : 1.0)
+                
+                if voiceNote.transcription.isEmpty {
+                    Text("AI chat is available after transcription completes")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 8)
+                }
+                
                 Spacer(minLength: 20)
             }
             .padding(.horizontal, viewModel.animateFromSource ? 20 : 12)
@@ -229,6 +269,9 @@ struct VoiceNoteDetailView: View {
             }
             .padding(16)
         )
+        .sheet(isPresented: $showingAIChat) {
+            AIChatView(voiceNote: voiceNote)
+        }
     }
 }
 
