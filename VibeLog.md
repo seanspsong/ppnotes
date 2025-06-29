@@ -188,4 +188,33 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0009
+- **Time**: 20:45
+- **Date**: 2025-01-25
+- **Vibe Summary**: Implemented complete language selection system with beautiful onboarding flow and settings integration. Created user-friendly interface for selecting transcription language with visual flags and proper integration with existing voice transcription system.
+- **Achievement**: 
+  - ✅ Created LanguageSelectionView.swift with elegant onboarding popup interface
+  - ✅ Implemented 7 supported languages with flag emojis and native names (English, Japanese, Chinese, Italian, German, French, Spanish)
+  - ✅ Built responsive grid layout with proper sizing and spacing optimization
+  - ✅ Added first-launch detection using UserDefaults "HasCompletedLanguageOnboarding" key
+  - ✅ Integrated fullScreenCover presentation with 0.5s delay for smooth onboarding experience
+  - ✅ Created comprehensive SettingsView.swift with language selection, privacy info, and about section
+  - ✅ Added language preference persistence using "PreferredTranscriptionLanguage" UserDefaults key
+  - ✅ Implemented smart language detection with device locale fallback and English default
+  - ✅ Enhanced PPNotesApp.swift with proper onboarding flow management
+  - ✅ Fixed ContentView.swift by removing duplicate SettingsView declaration
+  - ✅ Optimized UI sizing through multiple iterations based on user feedback
+  - ✅ Updated README.md with comprehensive documentation of language features
+  - ✅ Successfully tested build compilation for iOS Simulator
+- **Lesson Learnt**: 
+  - **Apple Speech Framework Limitations**: Researched and confirmed that Apple's SpeechTranscriber (iOS 26) does NOT support automatic language detection. Users must specify target language upfront, making manual language selection essential for optimal transcription accuracy.
+  - **Onboarding UX Best Practices**: First-launch language selection should be presented as a beautiful, non-intimidating experience rather than a technical configuration. Using visual flags, native language names, and elegant animations creates positive first impressions.
+  - **UI Iteration Process**: "Make it smaller" doesn't mean shrinking text and icons - it means removing excess whitespace while maintaining readability. Multiple design iterations helped find the right balance between compactness and usability.
+  - **iOS Project File Management**: Modern Xcode projects automatically detect new .swift files through file system monitoring, eliminating need for manual project.pbxproj editing. This simplifies file organization and reduces merge conflicts.
+  - **Locale Normalization Integration**: Leveraging existing locale normalization code (underscore to hyphen conversion) ensures compatibility between user selection and transcription system requirements.
+  - **Settings Pattern Implementation**: iOS users expect language settings to be accessible both during onboarding and later in settings. Reusing the same LanguageSelectionView component with different presentation modes maintains consistency while reducing code duplication.
+  - **UserDefaults Key Strategy**: Using descriptive, consistent keys like "HasCompletedLanguageOnboarding" and "PreferredTranscriptionLanguage" makes the preference system self-documenting and easier to maintain.
+
+---
+
 *Continue adding entries below...* 

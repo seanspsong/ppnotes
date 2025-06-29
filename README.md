@@ -20,30 +20,24 @@ PPNotes (Personal & Private Notes) is an iOS app for taking voice notes using Ap
 
 ## Language Support
 
-PPNotes uses iOS 26's new SpeechTranscriber framework for on-device voice transcription. Currently supported languages include:
+PPNotes features an intuitive language selection interface that allows you to choose your preferred transcription language. The app uses iOS 26's advanced SpeechTranscriber framework for on-device voice transcription.
 
-### Available Now
-- **English** (US, UK, Australia, India)
-- **French** (France)
-- **German** (Germany)
-- **Italian** (Italy)
-- **Portuguese** (Brazil)
-- **Spanish** (Spain)
-- **Japanese** (Japan)
-- **Korean** (Korea)
-- **Chinese** (Mandarin, Simplified)
+### Supported Languages
+- 🇺🇸 **English** (en-US)
+- 🇯🇵 **Japanese** (ja-JP) - 日本語
+- 🇨🇳 **Chinese** (zh-CN) - 中文
+- 🇮🇹 **Italian** (it-IT) - Italiano
+- 🇩🇪 **German** (de-DE) - Deutsch
+- 🇫🇷 **French** (fr-FR) - Français
+- 🇪🇸 **Spanish** (es-ES) - Español
 
-### Coming End of 2025
-- **Danish**
-- **Dutch**
-- **Norwegian**
-- **Portuguese** (Portugal)
-- **Swedish**
-- **Turkish**
-- **Chinese** (Traditional)
-- **Vietnamese**
+### Language Selection Features
+- **First Launch Setup**: Beautiful onboarding screen to select your preferred language
+- **Easy Language Changes**: Access language settings anytime through the app settings
+- **Smart Fallback**: Automatic fallback to SFSpeechRecognizer if SpeechTranscriber is unavailable
+- **Device Integration**: Automatically detects and suggests your device's language as default
 
-> **Note**: All transcription happens entirely on-device with no internet required. Apple continues to add more languages regularly. For unsupported languages, the app falls back to the system's DictationTranscriber which supports additional languages.
+> **Privacy Note**: All transcription happens entirely on-device with no internet required. Your voice data never leaves your device, regardless of the selected language.
 
 ## Privacy
 
