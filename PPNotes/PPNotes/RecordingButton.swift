@@ -102,7 +102,7 @@ struct RecordingButton: View {
             
             // Push to Talk label
             if !viewModel.isRecording && !viewModel.isDeleteMode {
-                Text("🎙️ Push to Talk")
+                Text("Push to Talk")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .transition(.opacity)

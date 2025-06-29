@@ -66,7 +66,7 @@ struct ContentView: View {
                                     .frame(height: CGFloat(ceil(Double(viewModel.voiceNotes.count) / 2.0)) * 250)
                                 }
                                 .padding(.top, 20)
-                                .padding(.bottom, 140) // Increased bottom padding to prevent clipping
+                                .padding(.bottom, 80) // Bottom padding for floating button clearance
                                 .animation(.spring(response: 1.0, dampingFraction: 0.85), value: viewModel.isAddingNewNote)
                                 .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
                             }
@@ -76,20 +76,6 @@ struct ContentView: View {
                             // Pull to refresh functionality
                             // TODO: Implement re-processing with latest LLM model
                         }
-                        
-                        // Recording Button Area - Fixed at bottom
-                        VStack(spacing: 8) {
-                            RecordingButton(viewModel: viewModel)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, max(geometry.safeAreaInsets.bottom, 20))
-                        .padding(.top, 12)
-                        .background(
-                            // Semi-transparent background for button area
-                            Color(.systemBackground)
-                                .opacity(0.95)
-                                .background(.ultraThinMaterial)
-                        )
                     }
                     .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
@@ -115,7 +101,16 @@ struct ContentView: View {
         }
         .preferredColorScheme(nil) // Adaptive to system
         .overlay(
-            // Card overlay for voice note detail
+            // Floating Recording Button
+            VStack {
+                Spacer()
+                RecordingButton(viewModel: viewModel)
+                    .padding(.bottom, 34) // Space from bottom edge
+            }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+        )
+        .overlay(
+            // Card overlay for voice note detail (top layer)
             Group {
                 if let selectedNote = viewModel.selectedNoteForDetail {
                     GeometryReader { screenGeometry in
