@@ -211,12 +211,39 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     
     private func setupTranscriber() async throws {
         // Get user's preferred transcription language (default to device locale)
-        let preferredLocale = getPreferredTranscriptionLocale()
+        var preferredLocale = getPreferredTranscriptionLocale()
         print("🎤 Using preferred locale: \(preferredLocale.identifier)")
         
-        // Check if this locale is available and download if needed
-        try await ensureModelAvailable(for: preferredLocale)
+        // Check if SpeechTranscriber is available first
+        let supportedLocales = await SpeechTranscriber.supportedLocales
+        if supportedLocales.isEmpty {
+            print("⚠️ SpeechTranscriber not available, will use SFSpeechRecognizer only")
+            // Just validate that SFSpeechRecognizer works
+            try await ensureModelAvailable(for: preferredLocale)
+            return
+        }
         
+        // Try to ensure SpeechTranscriber model is available, with fallback to English
+        do {
+            try await ensureModelAvailable(for: preferredLocale)
+        } catch TranscriptionError.localeNotSupported {
+            // Fallback to English if preferred locale not supported
+            print("🔄 Falling back to English (en-US)")
+            preferredLocale = Locale(identifier: "en-US")
+            try await ensureModelAvailable(for: preferredLocale)
+        } catch TranscriptionError.modelsNotInstalled {
+            // If models not installed, try English as fallback
+            if preferredLocale.identifier != "en-US" {
+                print("🔄 Trying English fallback due to missing models")
+                preferredLocale = Locale(identifier: "en-US")
+                try await ensureModelAvailable(for: preferredLocale)
+            } else {
+                // If even English models aren't installed, rethrow
+                throw TranscriptionError.modelsNotInstalled(preferredLocale.identifier)
+            }
+        }
+        
+        // Only set up SpeechTranscriber if models are available
         speechTranscriber = SpeechTranscriber(
             locale: preferredLocale,
             transcriptionOptions: [],
@@ -240,48 +267,143 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             return preferredLocale
         }
         
-        // Use device locale as default
-        print("🎤 Using device locale: \(Locale.current.identifier)")
-        return Locale.current
+        // Normalize device locale format for SpeechTranscriber compatibility
+        let deviceLocaleId = Locale.current.identifier
+        let normalizedLocaleId = normalizeLocaleIdentifier(deviceLocaleId)
+        
+        print("🎤 Using device locale: \(deviceLocaleId) → normalized: \(normalizedLocaleId)")
+        return Locale(identifier: normalizedLocaleId)
+    }
+    
+    private func normalizeLocaleIdentifier(_ identifier: String) -> String {
+        // Convert underscore to hyphen (en_US → en-US)
+        let hyphenized = identifier.replacingOccurrences(of: "_", with: "-")
+        
+        // Map common device locales to SpeechTranscriber expected formats
+        let localeMapping: [String: String] = [
+            "en-US": "en-US",
+            "en-GB": "en-GB", 
+            "en-AU": "en-AU",
+            "en-IN": "en-IN",
+            "zh-Hans": "zh-CN",  // Chinese Simplified mapping
+            "zh-Hant": "zh-TW",  // Chinese Traditional mapping
+            "zh-Hans-US": "zh-CN",
+            "zh-Hant-US": "zh-TW",
+            "ja-JP": "ja-JP",
+            "ko-KR": "ko-KR",
+            "fr-FR": "fr-FR",
+            "de-DE": "de-DE",
+            "es-ES": "es-ES",
+            "it-IT": "it-IT",
+            "pt-BR": "pt-BR"
+        ]
+        
+        // Return mapped locale or fall back to language code mapping
+        if let mapped = localeMapping[hyphenized] {
+            return mapped
+        }
+        
+        // Fallback: extract language code and map to most common variant
+        let languageCode = String(hyphenized.prefix(2))
+        
+        switch languageCode {
+        case "en": return "en-US"
+        case "zh": 
+            // Check for traditional vs simplified hints
+            if hyphenized.contains("Hant") || hyphenized.contains("TW") || hyphenized.contains("HK") {
+                return "zh-TW"
+            } else {
+                return "zh-CN"
+            }
+        case "ja": return "ja-JP"
+        case "ko": return "ko-KR"
+        case "fr": return "fr-FR"
+        case "de": return "de-DE"
+        case "es": return "es-ES"
+        case "it": return "it-IT"
+        case "pt": 
+            if hyphenized.contains("BR") {
+                return "pt-BR"
+            } else {
+                return "pt-BR"  // Default to Brazil variant
+            }
+        default: return hyphenized
+        }
     }
     
     private func ensureModelAvailable(for locale: Locale) async throws {
-        let supportedLocales = await SpeechTranscriber.supportedLocales
-        let installedLocales = await SpeechTranscriber.installedLocales
-        
         print("🎤 Checking availability for: \(locale.identifier)")
-        print("🎤 Supported locales: \(supportedLocales.map { $0.identifier })")
-        print("🎤 Installed locales: \(installedLocales.map { $0.identifier })")
         
-        // Check if the locale is supported
-        let isSupported = supportedLocales.contains { supportedLocale in
-            supportedLocale.identifier == locale.identifier ||
-            supportedLocale.language.languageCode == locale.language.languageCode
-        }
+        // Use SFSpeechRecognizer to check for supported locales (more reliable than SpeechTranscriber API)
+        let speechRecognizer = SFSpeechRecognizer(locale: locale)
         
-        guard isSupported else {
-            print("❌ Locale \(locale.identifier) not supported")
-            throw TranscriptionError.localeNotSupported(locale.identifier)
-        }
-        
-        // Check if the model is already installed
-        let isInstalled = installedLocales.contains { installedLocale in
-            installedLocale.identifier == locale.identifier ||
-            installedLocale.language.languageCode == locale.language.languageCode
-        }
-        
-        if isInstalled {
-            print("✅ Language model already installed for \(locale.identifier)")
+        // Check if SFSpeechRecognizer can be created for this locale
+        guard let recognizer = speechRecognizer else {
+            print("❌ SFSpeechRecognizer could not be created for locale: \(locale.identifier)")
+            
+            // Try creating with just language code
+            let languageCode = locale.language.languageCode?.identifier ?? "en"
+            let fallbackLocale = Locale(identifier: languageCode)
+            let fallbackRecognizer = SFSpeechRecognizer(locale: fallbackLocale)
+            
+            guard fallbackRecognizer != nil else {
+                print("❌ Fallback SFSpeechRecognizer also failed for: \(languageCode)")
+                throw TranscriptionError.localeNotSupported(locale.identifier)
+            }
+            
+            print("✅ Using fallback language code: \(languageCode)")
             return
         }
         
-        // If supported but not installed, we need to show an error or download
-        print("⚠️ Language model for \(locale.identifier) is supported but not installed")
-        print("💡 User needs to download language model in Settings")
+        // Check if the recognizer is available
+        guard recognizer.isAvailable else {
+            print("❌ SFSpeechRecognizer not available for locale: \(locale.identifier)")
+            throw TranscriptionError.modelsNotInstalled(locale.identifier)
+        }
         
-        // For now, throw an error with helpful message
-        // In a production app, you might want to use AssetInventory to download automatically
-        throw TranscriptionError.modelsNotInstalled(locale.identifier)
+        print("✅ SFSpeechRecognizer is available for \(locale.identifier)")
+        
+        // Also check SpeechTranscriber availability (iOS 26+ feature)
+        let supportedLocales = await SpeechTranscriber.supportedLocales
+        let installedLocales = await SpeechTranscriber.installedLocales
+        
+        // If SpeechTranscriber lists are empty, we'll rely on SFSpeechRecognizer validation above
+        if supportedLocales.isEmpty {
+            // Don't log this as it's expected in many cases
+            return
+        }
+        
+        print("🎤 SpeechTranscriber supported locales: \(supportedLocales.map { $0.identifier })")
+        print("🎤 SpeechTranscriber installed locales: \(installedLocales.map { $0.identifier })")
+        
+        // Enhanced locale matching for SpeechTranscriber
+        let isSupported = supportedLocales.contains { supportedLocale in
+            supportedLocale.identifier == locale.identifier ||
+            supportedLocale.language.languageCode == locale.language.languageCode ||
+            supportedLocale.identifier.hasPrefix(locale.language.languageCode?.identifier ?? "") ||
+            locale.identifier.hasPrefix(supportedLocale.language.languageCode?.identifier ?? "")
+        }
+        
+        guard isSupported else {
+            print("❌ Locale \(locale.identifier) not supported by SpeechTranscriber")
+            throw TranscriptionError.localeNotSupported(locale.identifier)
+        }
+        
+        // Check installation status
+        let isInstalled = installedLocales.contains { installedLocale in
+            installedLocale.identifier == locale.identifier ||
+            installedLocale.language.languageCode == locale.language.languageCode ||
+            installedLocale.identifier.hasPrefix(locale.language.languageCode?.identifier ?? "") ||
+            locale.identifier.hasPrefix(installedLocale.language.languageCode?.identifier ?? "")
+        }
+        
+        if isInstalled {
+            print("✅ SpeechTranscriber language model already installed for \(locale.identifier)")
+        } else {
+            print("⚠️ SpeechTranscriber language model for \(locale.identifier) is supported but not installed")
+            print("💡 User needs to download language model in Settings")
+            throw TranscriptionError.modelsNotInstalled(locale.identifier)
+        }
     }
     
     private func transcribeAudio(audioURL: URL, voiceNoteId: UUID) async {
@@ -306,17 +428,20 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             // Setup transcriber
             try await setupTranscriber()
             
-            guard let transcriber = speechTranscriber,
-                  let analyzer = speechAnalyzer else {
-                throw TranscriptionError.failedToSetup
+            // Check if SpeechTranscriber was set up or if we should use legacy API directly
+            let transcriptionText: String
+            if let transcriber = speechTranscriber, let analyzer = speechAnalyzer {
+                // Try modern SpeechTranscriber API
+                transcriptionText = try await performTranscription(
+                    audioURL: audioURL,
+                    transcriber: transcriber,
+                    analyzer: analyzer
+                )
+            } else {
+                // Use legacy SFSpeechRecognizer directly
+                print("🎤 Using SFSpeechRecognizer for transcription")
+                transcriptionText = try await performLegacyTranscription(audioURL: audioURL)
             }
-            
-            // Create transcription task
-            let transcriptionText = try await performTranscription(
-                audioURL: audioURL,
-                transcriber: transcriber,
-                analyzer: analyzer
-            )
             
             // Update the voice note with transcription
             await MainActor.run {
@@ -351,23 +476,67 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         analyzer: SpeechAnalyzer
     ) async throws -> String {
         
-        // Create an AVAudioFile from the URL
-        let audioFile = try AVAudioFile(forReading: audioURL)
-        
-        // Collect all transcription results
-        async let transcriptionFuture = transcriber.results
-            .reduce(into: "") { result, transcriptionResult in
-                result += transcriptionResult.text.description
+        do {
+            // Try the new iOS 26 SpeechTranscriber API first
+            let audioFile = try AVAudioFile(forReading: audioURL)
+            
+            // Collect all transcription results
+            async let transcriptionFuture = transcriber.results
+                .reduce(into: "") { result, transcriptionResult in
+                    result += transcriptionResult.text.description
+                }
+            
+            // Start analyzing the audio file
+            if let lastSample = try await analyzer.analyzeSequence(from: audioFile) {
+                try await analyzer.finalizeAndFinish(through: lastSample)
+            } else {
+                await analyzer.cancelAndFinishNow()
             }
+            
+            return try await transcriptionFuture
+            
+        } catch {
+            // Only log unexpected errors, not format compatibility issues
+            if !error.localizedDescription.contains("Audio format is not supported") {
+                print("⚠️ SpeechTranscriber failed, falling back to SFSpeechRecognizer: \(error)")
+            }
+            
+            // Fallback to older, more reliable SFSpeechRecognizer API
+            return try await performLegacyTranscription(audioURL: audioURL)
+        }
+    }
+    
+    private func performLegacyTranscription(audioURL: URL) async throws -> String {
+        let preferredLocale = getPreferredTranscriptionLocale()
         
-        // Start analyzing the audio file
-        if let lastSample = try await analyzer.analyzeSequence(from: audioFile) {
-            try await analyzer.finalizeAndFinish(through: lastSample)
-        } else {
-            await analyzer.cancelAndFinishNow()
+        guard let speechRecognizer = SFSpeechRecognizer(locale: preferredLocale) else {
+            throw TranscriptionError.localeNotSupported(preferredLocale.identifier)
         }
         
-        return try await transcriptionFuture
+        guard speechRecognizer.isAvailable else {
+            throw TranscriptionError.modelsNotInstalled(preferredLocale.identifier)
+        }
+        
+        let request = SFSpeechURLRecognitionRequest(url: audioURL)
+        request.shouldReportPartialResults = false
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            speechRecognizer.recognitionTask(with: request) { result, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                
+                guard let result = result else {
+                    continuation.resume(throwing: TranscriptionError.transcriptionFailed)
+                    return
+                }
+                
+                if result.isFinal {
+                    continuation.resume(returning: result.bestTranscription.formattedString)
+                }
+            }
+        }
     }
     
     private func updateVoiceNoteWithTranscription(

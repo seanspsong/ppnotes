@@ -163,4 +163,29 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0008
+- **Time**: 00:30
+- **Date**: 2025-06-29
+- **Vibe Summary**: Fixed critical locale compatibility issue preventing voice transcription on US devices. Resolved en_US vs en-US format mismatch between iOS system locales and Apple's SpeechTranscriber framework, implementing robust fallback system for reliable transcription.
+- **Achievement**: 
+  - ✅ Diagnosed locale format mismatch issue: device locale "en_US" vs SpeechTranscriber expected "en-US"
+  - ✅ Implemented normalizeLocaleIdentifier() function to convert underscore to hyphen format
+  - ✅ Added comprehensive locale mapping for all supported languages (English variants, Chinese, Japanese, Korean, European languages)
+  - ✅ Enhanced locale matching with multiple strategies: exact match, language code match, and prefix matching
+  - ✅ Built automatic fallback system: preferred locale → English → legacy SFSpeechRecognizer
+  - ✅ Added early SpeechTranscriber availability detection to skip setup when framework unavailable
+  - ✅ Implemented performLegacyTranscription() using proven SFSpeechRecognizer API as fallback
+  - ✅ Cleaned up debug output to reduce noise from expected fallback scenarios
+  - ✅ Improved audio recording settings validation and error handling
+  - ✅ Fixed transcription flow to gracefully handle both modern (iOS 26) and legacy speech APIs
+- **Lesson Learnt**: 
+  - **iOS Locale System Complexity**: iOS device locales use underscore format (en_US) while Apple's speech frameworks expect hyphen format (en-US). This discrepancy requires explicit normalization for compatibility.
+  - **Framework Evolution Challenges**: iOS 26's SpeechTranscriber represents a major API evolution from SFSpeechRecognizer, but device availability varies. Building robust fallback systems is essential for reliable functionality across different iOS versions and device capabilities.
+  - **Locale Matching Strategies**: Simple string comparison isn't sufficient for locale matching. Robust implementations need exact identifier matching, language code fallbacks, and prefix matching to handle regional variants (zh-Hans-US → zh-CN).
+  - **Debug Output Management**: Production apps need clean logging that distinguishes between expected fallbacks and actual errors. Excessive debug noise from normal operation paths reduces developer productivity and masks real issues.
+  - **Audio Format Compatibility**: Recording format settings that work with one speech API may not work with another. Conservative, well-tested audio formats (12kHz M4A) provide better cross-API compatibility than "optimized" settings.
+  - **Graceful Degradation**: Modern iOS apps should detect feature availability early and choose appropriate implementation paths rather than attempting setup and failing later. This provides better user experience and cleaner error handling.
+
+---
+
 *Continue adding entries below...* 
