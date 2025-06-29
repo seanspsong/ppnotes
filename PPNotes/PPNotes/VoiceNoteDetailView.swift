@@ -21,39 +21,7 @@ struct VoiceNoteDetailView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Card header with close button
-            HStack {
-                Text("Voice Note")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Button(action: {
-                    print("🎬 Close button tapped, dismissing...")
-                    withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
-                        viewModel.animateFromSource = false
-                    }
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                        viewModel.selectedNoteForDetail = nil
-                    }
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color(.systemBackground))
-            
-            Divider()
-            
-            ScrollView {
+        ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Header with date and time
                 VStack(alignment: .leading, spacing: 8) {
@@ -229,11 +197,38 @@ struct VoiceNoteDetailView: View {
             }
             .padding(.horizontal, viewModel.animateFromSource ? 20 : 12)
             .padding(.vertical, viewModel.animateFromSource ? 16 : 8)
-            }
         }
         .background(Color(.secondarySystemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+        .overlay(
+            // Close button positioned in top-right corner
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        print("🎬 Close button tapped, dismissing...")
+                        withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                            viewModel.animateFromSource = false
+                        }
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            viewModel.selectedNoteForDetail = nil
+                        }
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                            .background(Color(.systemBackground))
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                Spacer()
+            }
+            .padding(16)
+        )
     }
 }
 

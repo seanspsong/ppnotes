@@ -239,4 +239,30 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0011
+- **Time**: 16:30
+- **Date**: 2025-01-25
+- **Vibe Summary**: Enhanced file organization and fixed critical transcription bug. Implemented semantic file naming system, improved settings UI with language flag indicator, and resolved curly braces formatting issue in iOS 26 SpeechTranscriber API integration.
+- **Achievement**: 
+  - ✅ Implemented semantic file naming system: ppnotes-yyyy-mm-dd-hhmm-rec01.m4a format with auto-incrementing counter
+  - ✅ Added generateUniqueFileName() function with smart conflict resolution for multiple recordings per minute
+  - ✅ Enhanced file organization with chronological sorting and meaningful naming convention
+  - ✅ Replaced settings gear icon with dynamic language flag showing current user's transcription language
+  - ✅ Added real-time language flag updates using UserDefaults.didChangeNotification observer
+  - ✅ Created comprehensive language-to-flag mapping system covering 7+ supported languages
+  - ✅ Fixed critical curly braces bug in transcription caused by AttributedString.description usage
+  - ✅ Replaced .description with String(transcriptionResult.text.characters) for clean text extraction
+  - ✅ Added robust filtering system to remove formatting artifacts from both modern and legacy APIs
+  - ✅ Implemented debug logging for transcription troubleshooting and validation
+  - ✅ Enhanced error handling for empty transcription results with graceful fallbacks
+- **Lesson Learnt**: 
+  - **File Naming Strategy**: Semantic naming with timestamps and counters provides better user experience than UUID-based names. Users can understand file chronology and context from filenames alone, especially useful for backup/export scenarios.
+  - **AttributedString API Gotchas**: iOS 26's new SpeechTranscriber returns AttributedString objects where .description includes formatting metadata that appears as curly braces. Always use String(attributedString.characters) for clean text extraction.
+  - **Dynamic UI Indicators**: Replacing static icons with contextual indicators (language flags vs settings gear) provides immediate visual feedback about current app state. Users instantly know their active language without navigating to settings.
+  - **API Evolution Debugging**: When frameworks evolve (SFSpeechRecognizer → SpeechTranscriber), bugs often emerge from changed data types and extraction methods. Robust filtering and validation prevent formatting artifacts from reaching the UI.
+  - **UserDefaults Observation**: SwiftUI's .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) enables real-time UI updates when settings change, creating seamless user experience across different views.
+  - **Fallback System Design**: Both modern and legacy speech APIs need identical filtering logic. Centralizing text cleaning ensures consistent results regardless of which API path is taken.
+
+---
+
 *Continue adding entries below...* 
