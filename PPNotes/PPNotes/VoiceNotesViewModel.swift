@@ -24,8 +24,13 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var isTranscribing = false
     @Published var isDeleteMode = false
     @Published var selectedNoteForDetail: VoiceNote?
+    @Published var isGeneratingTitle = false
+    @Published var titleGenerationProgress: Double = 0.0
     
     private var pausedNoteId: UUID?
+    
+    // Title Generation Service
+    private lazy var titleGenerationService = TitleGenerationService()
     
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
@@ -411,13 +416,11 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         // Check speech recognition permission
         guard SFSpeechRecognizer.authorizationStatus() == .authorized else {
             print("Speech recognition not authorized")
-            await MainActor.run {
-                updateVoiceNoteWithTranscription(
-                    voiceNoteId: voiceNoteId,
-                    transcription: "",
-                    fallbackTitle: "Voice Note"
-                )
-            }
+            await updateVoiceNoteWithAITitle(
+                voiceNoteId: voiceNoteId,
+                transcription: "",
+                fallbackTitle: "Voice Note"
+            )
             return
         }
         
@@ -444,14 +447,15 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
                 transcriptionText = try await performLegacyTranscription(audioURL: audioURL)
             }
             
-            // Update the voice note with transcription
+            // Update the voice note with transcription and generate intelligent title
             await MainActor.run {
-                updateVoiceNoteWithTranscription(
-                    voiceNoteId: voiceNoteId,
-                    transcription: transcriptionText
-                )
                 isTranscribing = false
             }
+            
+            await updateVoiceNoteWithAITitle(
+                voiceNoteId: voiceNoteId,
+                transcription: transcriptionText
+            )
             
         } catch {
             print("Transcription failed: \(error.localizedDescription)")
@@ -460,14 +464,15 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             }
             
             await MainActor.run {
-                // Update with fallback title
-                updateVoiceNoteWithTranscription(
-                    voiceNoteId: voiceNoteId,
-                    transcription: "",
-                    fallbackTitle: "Voice Note"
-                )
                 isTranscribing = false
             }
+            
+            // Update with fallback title
+            await updateVoiceNoteWithAITitle(
+                voiceNoteId: voiceNoteId,
+                transcription: "",
+                fallbackTitle: "Voice Note"
+            )
         }
     }
     
@@ -540,57 +545,163 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         }
     }
     
-    private func updateVoiceNoteWithTranscription(
+    // MARK: - AI-Powered Title Generation
+    
+    private func updateVoiceNoteWithAITitle(
         voiceNoteId: UUID,
         transcription: String,
         fallbackTitle: String? = nil
-    ) {
+    ) async {
         guard let index = voiceNotes.firstIndex(where: { $0.id == voiceNoteId }) else {
             return
         }
         
-        let title: String
-        if !transcription.isEmpty {
-            // Generate title from first few words of transcription
-            title = generateTitleFromTranscription(transcription)
-        } else {
-            title = fallbackTitle ?? "Voice Note"
+        // First update with transcription and temporary title
+        let temporaryTitle = !transcription.isEmpty ? "Generating title..." : (fallbackTitle ?? "Voice Note")
+        
+        await MainActor.run {
+            voiceNotes[index] = VoiceNote(
+                id: voiceNotes[index].id,
+                title: temporaryTitle,
+                audioFileName: voiceNotes[index].audioFileName,
+                duration: voiceNotes[index].duration,
+                timestamp: voiceNotes[index].timestamp,
+                transcription: transcription
+            )
+            saveVoiceNotes()
         }
         
-        voiceNotes[index] = VoiceNote(
-            id: voiceNotes[index].id,
-            title: title,
-            audioFileName: voiceNotes[index].audioFileName,
-            duration: voiceNotes[index].duration,
-            timestamp: voiceNotes[index].timestamp,
-            transcription: transcription
-        )
-        
-        saveVoiceNotes()
+        // If we have transcription text, generate an intelligent title
+        if !transcription.isEmpty {
+            print("🚀 [ViewModel] Transcription completed - triggering title generation")
+            print("🚀 [ViewModel] Note ID: \(voiceNoteId)")
+            print("🚀 [ViewModel] Transcription preview: '\(String(transcription.prefix(50)))...'")
+            await generateAndUpdateTitle(voiceNoteId: voiceNoteId, transcription: transcription)
+        } else {
+            print("🚀 [ViewModel] ⚠️ No transcription text available - skipping title generation")
+        }
     }
     
-    private func generateTitleFromTranscription(_ transcription: String) -> String {
+    private func generateAndUpdateTitle(voiceNoteId: UUID, transcription: String) async {
+        print("🎯 [ViewModel] Starting title generation for note \(voiceNoteId)")
+        print("🎯 [ViewModel] Transcription length: \(transcription.count) characters")
+        
+        await MainActor.run {
+            isGeneratingTitle = true
+            titleGenerationProgress = 0.0
+        }
+        
+        let startTime = Date()
+        
+        // Generate intelligent title using smart NLP techniques
+        print("🎯 [ViewModel] Calling TitleGenerationService...")
+        let generatedTitle = await titleGenerationService.generateTitle(from: transcription)
+        
+        let totalTime = Date().timeIntervalSince(startTime)
+        print("🎯 [ViewModel] Title generation completed in \(String(format: "%.2f", totalTime))s")
+        print("🎯 [ViewModel] Generated title: '\(generatedTitle ?? "nil")'")
+        
+        // Mirror the progress from the service
+        await MainActor.run {
+            titleGenerationProgress = titleGenerationService.titleGenerationProgress
+        }
+        
+        // Update the voice note with the generated title
+        await MainActor.run {
+            guard let index = voiceNotes.firstIndex(where: { $0.id == voiceNoteId }) else {
+                print("🎯 [ViewModel] ❌ Error: Could not find voice note with ID \(voiceNoteId)")
+                isGeneratingTitle = false
+                titleGenerationProgress = 0.0
+                return
+            }
+            
+            let finalTitle = generatedTitle ?? generateFallbackTitle(from: transcription)
+            
+            if generatedTitle == nil {
+                print("🎯 [ViewModel] ⚠️ Using fallback title: '\(finalTitle)'")
+            } else {
+                print("🎯 [ViewModel] ✅ Using generated title: '\(finalTitle)'")
+            }
+            
+            voiceNotes[index] = VoiceNote(
+                id: voiceNotes[index].id,
+                title: finalTitle,
+                audioFileName: voiceNotes[index].audioFileName,
+                duration: voiceNotes[index].duration,
+                timestamp: voiceNotes[index].timestamp,
+                transcription: voiceNotes[index].transcription
+            )
+            
+            saveVoiceNotes()
+            isGeneratingTitle = false
+            titleGenerationProgress = 0.0
+            
+            print("🎯 [ViewModel] ✅ Title generation process completed for note \(voiceNoteId)")
+        }
+    }
+    
+    private func generateFallbackTitle(from transcription: String) -> String {
+        print("🚨 [ViewModel] Generating fallback title from transcription")
+        
         let words = transcription.trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
         
+        print("🚨 [ViewModel] Fallback: Found \(words.count) words in transcription")
+        
         if words.isEmpty {
+            print("🚨 [ViewModel] Fallback: No words found, using default 'Voice Note'")
             return "Voice Note"
         }
         
-        // Take first 2-3 words for title
-        let titleWords = Array(words.prefix(3))
+        // Take first 3-4 words for title
+        let titleWords = Array(words.prefix(4))
         let title = titleWords.joined(separator: " ")
+        
+        print("🚨 [ViewModel] Fallback: Selected words: \(titleWords)")
         
         // Capitalize first letter and limit length
         let capitalizedTitle = title.prefix(1).capitalized + title.dropFirst()
         
         // Truncate if too long
-        if capitalizedTitle.count > 25 {
-            return String(capitalizedTitle.prefix(22)) + "..."
+        let finalTitle: String
+        if capitalizedTitle.count > 30 {
+            finalTitle = String(capitalizedTitle.prefix(27)) + "..."
+            print("🚨 [ViewModel] Fallback: Truncated long title")
+        } else {
+            finalTitle = capitalizedTitle
         }
         
-        return capitalizedTitle
+        print("🚨 [ViewModel] Fallback: Final title: '\(finalTitle)'")
+        return finalTitle
+    }
+    
+    // MARK: - Batch Title Generation for Existing Notes
+    
+    func generateTitlesForExistingNotes() async {
+        let notesWithoutTitles = voiceNotes.filter { 
+            !$0.transcription.isEmpty && ($0.title.isEmpty || $0.title == "Voice Note" || $0.title == "Processing...")
+        }
+        
+        guard !notesWithoutTitles.isEmpty else { return }
+        
+        let generatedTitles = await titleGenerationService.generateTitlesForNotes(notesWithoutTitles)
+        
+        await MainActor.run {
+            for (noteId, title) in generatedTitles {
+                if let index = voiceNotes.firstIndex(where: { $0.id == noteId }) {
+                    voiceNotes[index] = VoiceNote(
+                        id: voiceNotes[index].id,
+                        title: title,
+                        audioFileName: voiceNotes[index].audioFileName,
+                        duration: voiceNotes[index].duration,
+                        timestamp: voiceNotes[index].timestamp,
+                        transcription: voiceNotes[index].transcription
+                    )
+                }
+            }
+            saveVoiceNotes()
+        }
     }
     
     private func getDocumentsDirectory() -> URL {

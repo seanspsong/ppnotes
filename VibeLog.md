@@ -217,4 +217,35 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0010
+- **Time**: 13:15
+- **Date**: 2025-06-29
+- **Vibe Summary**: Redesigned title generation system to use Apple's Foundation Models framework with comprehensive debug logging. Replaced complex rule-based approach with clean prompt-based solution using LanguageModelSession and async/await API.
+- **Achievement**: 
+  - ✅ Integrated Apple Foundation Models framework with proper `import FoundationModels`
+  - ✅ Implemented LanguageModelSession with custom instructions for intelligent title generation
+  - ✅ Built async/await API integration using `session.respond(to: prompt)` method
+  - ✅ Added SystemLanguageModel availability checking for iOS 26+ device compatibility
+  - ✅ Created comprehensive debug logging system with emoji-based visual hierarchy
+  - ✅ Implemented 3-phase processing with real-time progress tracking (0.3 → 0.6 → 1.0)
+  - ✅ Designed intelligent prompt for 8-10 word titles focusing on main topic/action
+  - ✅ Added input text limiting (800 characters) following Apple's token recommendations
+  - ✅ Built response cleaning system removing quotes, prefixes, and formatting properly
+  - ✅ Enhanced error handling with specific Apple Foundation Models error types
+  - ✅ Implemented graceful fallback to simple extraction when LLM unavailable/fails
+  - ✅ Added performance timing with total processing duration logging
+  - ✅ Removed legacy rule-based methods and cleaned up TitleGenerationService.swift
+  - ✅ Successfully built and tested on iOS 26 Simulator with proper compilation
+- **Lesson Learnt**: 
+  - **Apple Foundation Models API Design**: The FoundationModels framework uses a clean, intuitive Swift-first API with LanguageModelSession at its core. Custom instructions separate developer guidance from user prompts, preventing prompt injection while maintaining control over model behavior.
+  - **Prompt Engineering for Mobile**: Apple's on-device 3B parameter model excels at focused tasks like title generation when given specific constraints (8-10 words, avoid generic terms, focus on key content). Simple, clear prompts work better than complex multi-step instructions.
+  - **Debug Logging Strategy**: Using emoji-based visual hierarchy (🧠 [TitleGen], 🤖 [LLM], ✅ Success, ❌ Error) makes console output scannable during development. Comprehensive logging should track input analysis, processing phases, LLM interactions, and performance metrics.
+  - **Async/Await Integration**: Apple's Foundation Models API is fully async, requiring proper async function signatures throughout the call chain. Converting synchronous title generation to async improved responsiveness and allowed for real-time progress updates.
+  - **Availability vs Capability Checking**: SystemLanguageModel.availability enum provides clear device capability detection, but apps should still handle graceful fallbacks when models are unavailable. On-device AI features require robust fallback strategies for older devices.
+  - **Input Validation and Limits**: Apple recommends staying under 800 tokens for optimal performance. Truncating input text while preserving meaningful content prevents timeout issues and ensures consistent response times.
+  - **Response Post-Processing**: LLM outputs often contain formatting artifacts (quotes, prefixes, extra whitespace). Building a robust cleaning pipeline ensures consistent, user-ready titles regardless of model response variations.
+  - **Framework Evolution Benefits**: Replacing 200+ lines of complex rule-based logic with 50 lines of clean prompt-based code demonstrates the power of Apple's Foundation Models. Modern AI frameworks can simplify previously complex natural language processing tasks.
+
+---
+
 *Continue adding entries below...* 

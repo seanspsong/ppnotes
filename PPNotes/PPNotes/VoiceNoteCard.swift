@@ -150,6 +150,27 @@ struct VoiceNoteCard: View {
                     .foregroundColor(.primary)
                 
                 Spacer()
+                
+                // Show AI title generation indicator
+                if viewModel.isGeneratingTitle && voiceNote.title == "Generating title..." {
+                    HStack(spacing: 4) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                            .opacity(0.7)
+                        
+                        // Progress indicator
+                        if viewModel.titleGenerationProgress > 0 {
+                            ProgressView(value: viewModel.titleGenerationProgress)
+                                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                                .frame(width: 25, height: 2)
+                        } else {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                .scaleEffect(0.5)
+                        }
+                    }
+                }
             }
             
             // Transcription text (if available)
