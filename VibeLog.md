@@ -293,4 +293,32 @@ A log to track the development process, vibes, achievements, and lessons learned
 
 ---
 
+### VL0013
+- **Time**: 15:45
+- **Date**: 2025-01-26
+- **Vibe Summary**: Implemented comprehensive AI categorization system to intelligently distinguish between calendar events and reminders. Fixed duplicate creation issues and enhanced categorization logic with explicit trigger-based rules for accurate voice note analysis.
+- **Achievement**: 
+  - ✅ Unified AI suggestion system to prevent duplicate calendar events and reminders for same voice note
+  - ✅ Implemented single AI call with intelligent categorization instead of separate extraction processes
+  - ✅ Created explicit trigger-based logic: any time/date/person mentioned → calendar event
+  - ✅ Fixed "Remind me to buy..." phrases to correctly create reminders instead of being ignored
+  - ✅ Fixed medical appointments like "Visit Dr. John tomorrow 5 AM" to create calendar events
+  - ✅ Fixed social activities like "Play soccer with Leo tomorrow at 5 PM" to create calendar events
+  - ✅ Enhanced word detection with comprehensive lists: time words (AM/PM/morning/etc), date words (tomorrow/Friday/etc), person names
+  - ✅ Added step-by-step analysis instructions for AI to follow exact categorization rules
+  - ✅ Implemented fallback rule: when uncertain, prefer calendar event over reminder
+  - ✅ Added extensive debugging with input transcription and result logging
+  - ✅ Created comprehensive examples with real user cases and edge cases
+  - ✅ Successfully committed and pushed all improvements to GitHub with detailed commit messages
+- **Lesson Learnt**: 
+  - **AI Prompt Engineering Evolution**: LLM behavior requires extremely explicit instructions with step-by-step analysis rules. Subtle prompt changes can dramatically improve categorization accuracy where general instructions fail.
+  - **Duplicate Prevention Strategy**: Single unified AI call with explicit categorization rules prevents the logic conflicts that arise from running separate extraction processes and trying to merge results.
+  - **Trigger-Based Logic Superiority**: Clear trigger detection (any time word, any date word, any person name) works better than complex contextual analysis. Users understand simple rules and AI can apply them consistently.
+  - **Real-World Testing Importance**: User feedback on actual voice notes reveals edge cases that theoretical testing misses. "Play soccer with Leo tomorrow at 5 PM" should obviously be a calendar event, but required explicit rule refinement.
+  - **Debugging Strategy for AI Systems**: Comprehensive logging of input transcription, AI responses, and final categorization decisions enables rapid identification of logic failures and prompt improvement opportunities.
+  - **User Intent Patterns**: People naturally mention specific times, dates, and people when describing scheduled activities. Leveraging these natural language patterns creates more intuitive AI behavior than trying to guess context.
+  - **Fallback Rule Philosophy**: When AI faces ambiguous cases, preferring calendar events over reminders serves users better since scheduled items are more time-sensitive and valuable than simple task reminders.
+
+---
+
 *Continue adding entries below...* 
