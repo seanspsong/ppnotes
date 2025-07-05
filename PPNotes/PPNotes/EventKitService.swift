@@ -181,18 +181,29 @@ class EventKitService: ObservableObject {
         ekEvent.notes = createEventNotes(for: event)
         ekEvent.calendar = calendar
         
-        // Set dates
+        // Set location if available
+        if let location = event.location {
+            ekEvent.location = location
+            print("📍 [EventKit] Setting event location: '\(location)'")
+        }
+        
+        // Set dates with proper timezone handling
         if let suggestedDate = event.suggestedDate {
             ekEvent.startDate = suggestedDate
             let duration = event.duration ?? 3600 // Default 1 hour
             ekEvent.endDate = suggestedDate.addingTimeInterval(duration)
+            print("📅 [EventKit] Event scheduled: \(suggestedDate.formatted(.dateTime.year().month().day().hour().minute())) (local time)")
         } else {
             // Default to next hour, 1 hour duration
             let now = Date()
             let nextHour = Calendar.current.dateInterval(of: .hour, for: now)?.end ?? now.addingTimeInterval(3600)
             ekEvent.startDate = nextHour
             ekEvent.endDate = nextHour.addingTimeInterval(3600)
+            print("📅 [EventKit] Using default time: \(nextHour.formatted(.dateTime.year().month().day().hour().minute())) (local time)")
         }
+        
+        // Ensure event uses local time zone
+        ekEvent.timeZone = TimeZone.current
         
         // Save event
         try eventStore.save(ekEvent, span: .thisEvent, commit: true)

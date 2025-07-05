@@ -373,9 +373,9 @@ struct CalendarSuggestionCard: View {
                 
                 Spacer()
                 
-                // Date/time info
-                if let date = event.suggestedDate {
-                    VStack(alignment: .trailing, spacing: 2) {
+                // Date/time and location info
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let date = event.suggestedDate {
                         Text(date.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
                             .foregroundColor(.primary)
@@ -383,6 +383,17 @@ struct CalendarSuggestionCard: View {
                         Text(date.formatted(date: .omitted, time: .shortened))
                             .font(.caption)
                             .foregroundColor(.secondary)
+                    }
+                    
+                    if let location = event.location {
+                        HStack {
+                            Image(systemName: "location")
+                                .font(.caption2)
+                            Text(location)
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
+                        .foregroundColor(.secondary)
                     }
                 }
             }
