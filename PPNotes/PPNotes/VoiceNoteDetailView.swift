@@ -150,6 +150,11 @@ struct VoiceNoteDetailView: View {
                     }
                 }
                 
+                // AI Suggestions section
+                if !voiceNote.transcription.isEmpty {
+                    AISuggestionView(voiceNote: voiceNote)
+                }
+                
                 // Metadata section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Details")
