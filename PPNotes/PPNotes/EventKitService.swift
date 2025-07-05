@@ -116,16 +116,21 @@ class EventKitService: ObservableObject {
             throw EventKitError.noSourceAvailable
         }
         
-        // Create reminder
+        // Create reminder with final exclamation mark cleanup
         let reminder = EKReminder(eventStore: eventStore)
-        reminder.title = todo.title
+        let finalCleanTitle = todo.title
+            .components(separatedBy: CharacterSet(charactersIn: "!"))
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        print("🔍 [EventKit] Creating reminder - original: '\(todo.title)' → final: '\(finalCleanTitle)'")
+        reminder.title = finalCleanTitle
         reminder.notes = createReminderNotes(for: todo)
         reminder.calendar = defaultReminderList
         
-        // Set priority if available
-        if let priority = todo.priority {
-            reminder.priority = mapPriorityToEKPriority(priority)
-        }
+        // Temporarily disable priority to avoid iOS adding exclamation marks
+        reminder.priority = 0 // No priority
+        print("🔍 [EventKit] Setting reminder priority to 0 (none) to avoid exclamation marks")
         
         // Save reminder
         try eventStore.save(reminder, commit: true)

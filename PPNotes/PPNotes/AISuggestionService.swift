@@ -89,6 +89,8 @@ class AISuggestionService: ObservableObject {
         - Look for keywords like: need to, should, must, have to, remember to, buy, call, email, etc.
         - Priority: 1-9 (1=highest, 5=normal, 9=lowest)
         - Keep titles concise (under 50 characters)
+        - NEVER use exclamation marks (!, !!, !!!) in titles - they will be removed
+        - Use simple, clean language without dramatic emphasis or punctuation
         - Include context in notes if helpful
         - extractedText should be the original phrase/sentence from transcription
         
@@ -135,6 +137,8 @@ class AISuggestionService: ObservableObject {
         - Look for keywords like: schedule, meeting, appointment, call, event, dinner, lunch, etc.
         - Use ISO 8601 format for suggestedDate when date/time is mentioned
         - Duration in seconds (default 3600 for 1 hour if not specified)
+        - NEVER use exclamation marks (!, !!, !!!) in titles - they will be removed
+        - Use simple, clean language without dramatic emphasis or punctuation
         - Include context in notes if helpful
         - extractedText should be the original phrase/sentence from transcription
         
@@ -197,8 +201,16 @@ class AISuggestionService: ObservableObject {
                 return nil
             }
             
+            // Clean up title by removing all exclamation marks and trimming
+            let cleanTitle = title
+                .components(separatedBy: CharacterSet(charactersIn: "!"))
+                .joined()
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            print("🧹 [AI Todo] Title cleanup: '\(title)' → '\(cleanTitle)'")
+            
             return TodoSuggestion(
-                title: title,
+                title: cleanTitle,
                 notes: todoDict["notes"] as? String,
                 priority: todoDict["priority"] as? Int,
                 extractedText: extractedText
@@ -255,8 +267,16 @@ class AISuggestionService: ObservableObject {
                 suggestedDate = nil
             }
             
+            // Clean up title by removing all exclamation marks and trimming
+            let cleanTitle = title
+                .components(separatedBy: CharacterSet(charactersIn: "!"))
+                .joined()
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            print("🧹 [AI Calendar] Title cleanup: '\(title)' → '\(cleanTitle)'")
+            
             return CalendarSuggestion(
-                title: title,
+                title: cleanTitle,
                 notes: eventDict["notes"] as? String,
                 suggestedDate: suggestedDate,
                 duration: eventDict["duration"] as? TimeInterval,
