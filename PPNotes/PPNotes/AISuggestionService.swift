@@ -39,7 +39,7 @@ class AISuggestionService: ObservableObject {
             return 
         }
         
-        print("🎯 [AI Suggestion] Starting analysis for transcription: '\(transcription)'")
+        print("🎯 [AI Suggestion] Starting unified analysis for transcription: '\(transcription)'")
         isAnalyzing = true
         error = nil
         
@@ -47,19 +47,18 @@ class AISuggestionService: ObservableObject {
             // Initialize session if needed
             if session == nil {
                 session = LanguageModelSession(
-                    instructions: "You are a helpful AI assistant specialized in extracting actionable items from voice note transcriptions. You analyze text to identify todos, tasks, and calendar events."
+                    instructions: "You are a helpful AI assistant specialized in extracting actionable items from voice note transcriptions. You analyze text to categorize items as either calendar events or reminders based on context."
                 )
                 print("✅ [AI Suggestion] Initialized new LanguageModelSession")
             }
             
-            // Extract todos and calendar items sequentially (FoundationModels doesn't support concurrent calls)
-            let extractedTodos = await extractTodos(from: transcription)
-            let extractedCalendar = await extractCalendarItems(from: transcription)
+            // Run unified analysis that categorizes items appropriately
+            let (extractedTodos, extractedCalendar) = await extractCategorizedItems(from: transcription)
             
             todos = extractedTodos
             calendarItems = extractedCalendar
             
-            print("📊 [AI Suggestion] Analysis complete: \(extractedTodos.count) todos, \(extractedCalendar.count) calendar items")
+            print("📊 [AI Suggestion] Analysis complete: \(extractedTodos.count) reminders, \(extractedCalendar.count) calendar events")
             
         } catch {
             self.error = "Failed to analyze suggestions: \(error.localizedDescription)"
@@ -67,6 +66,152 @@ class AISuggestionService: ObservableObject {
         }
         
         isAnalyzing = false
+    }
+    
+    private func extractCategorizedItems(from transcription: String) async -> ([TodoSuggestion], [CalendarSuggestion]) {
+        let today = Date()
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "EEEE, MMMM d, yyyy"
+        
+        // Calculate key dates for AI reference
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+        let nextWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: today)!
+        
+        let prompt = """
+        Analyze this voice note transcription and extract actionable items. Categorize each item as either a CALENDAR EVENT or REMINDER based on these rules:
+        
+        🎯 CRITICAL DECISION LOGIC - FOLLOW EXACTLY:
+        
+        📅 CREATE CALENDAR EVENT IF ANY ONE OF THESE IS TRUE:
+        - Time words: "AM", "PM", "o'clock", "noon", "midnight", "morning", "afternoon", "evening", "tonight"
+        - Date words: "tomorrow", "today", "Friday", "Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday", "next week", "weekend"
+        - Person names: ANY proper name like "Leo", "John", "Sarah", "Dr. Smith", "Tom", etc.
+        - Social activities: "play with", "meet with", "dinner with", "lunch with", "call", "visit"
+        - Appointments: "appointment", "meeting", "visit Dr.", "dentist"
+        - Calendar keyword: "calendar"
+        
+        📝 CREATE REMINDER ONLY IF ALL OF THESE ARE TRUE:
+        - NO time mentioned at all
+        - NO date mentioned at all
+        - NO other people mentioned at all
+        - Personal solo tasks: "buy", "get", "remember", "finish", "complete"
+        - OR contains "remind me", "reminder", "don't forget"
+        
+        🚨 ABSOLUTE RULES - NO EXCEPTIONS:
+        1. "play soccer with Leo on tomorrow at 5 PM" → CALENDAR EVENT (has person + date + time)
+        2. "I will need to visit Dr. John tomorrow morning 5 AM" → CALENDAR EVENT (has person + date + time)
+        3. "Remind me to buy a Mac Apple AirPods Pro" → REMINDER (starts with "remind me", no time/date/people)
+        4. ANY activity with ANOTHER PERSON + TIME/DATE → CALENDAR EVENT
+        5. ANY activity with just TIME or just DATE → CALENDAR EVENT
+        6. When in doubt between calendar and reminder → CHOOSE CALENDAR EVENT
+        
+        ⚠️ CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
+        1. ALWAYS extract actionable items from every voice note - never return empty results
+        2. READ the transcription word by word looking for time, date, and people
+        3. If you find ANY time word (AM, PM, morning, etc.) → CALENDAR EVENT
+        4. If you find ANY date word (tomorrow, Friday, etc.) → CALENDAR EVENT  
+        5. If you find ANY person name (Leo, John, Dr. Smith, etc.) → CALENDAR EVENT
+        6. Only create REMINDER if it's purely personal with NO time, NO date, NO people
+        7. When analyzing "I will need to play soccer with Leo on tomorrow at 5 PM":
+           - "Leo" = person name → CALENDAR EVENT
+           - "tomorrow" = date word → CALENDAR EVENT
+           - "5 PM" = time word → CALENDAR EVENT
+           - This has ALL THREE triggers → DEFINITELY CALENDAR EVENT
+        8. Do NOT create both calendar event AND reminder for same item
+        9. If uncertain → choose CALENDAR EVENT over REMINDER
+        
+        FORMAT: Return JSON with this structure:
+        {
+            "reminders": [
+                {
+                    "title": "Task title",
+                    "notes": "Additional details if any",
+                    "priority": 5,
+                    "extractedText": "Original text from transcription"
+                }
+            ],
+            "events": [
+                {
+                    "title": "Event title",
+                    "notes": "Additional details if any",
+                    "suggestedDate": "2025-01-25T15:30:00",
+                    "duration": 3600,
+                    "location": "Location if mentioned",
+                    "extractedText": "Original text from transcription"
+                }
+            ]
+        }
+        
+        DATE CALCULATION RULES:
+        - TODAY is: \(dateFormatter.string(from: today))
+        - TOMORROW is: \(dateFormatter.string(from: tomorrow))
+        - NEXT WEEK is: \(dateFormatter.string(from: nextWeek))
+        - Convert relative dates to LOCAL time (no Z suffix)
+        - "tomorrow" → use \(tomorrow.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)))
+        - "next week" → use \(nextWeek.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)))
+        - "today" → use \(today.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)))
+        
+        TIME PARSING RULES:
+        - ALWAYS extract and use specific times mentioned in the voice note
+        - "10 PM" or "10pm" → set hour to 22 (24-hour format)
+        - "3 PM" or "3pm" → set hour to 15
+        - "9 AM" or "9am" → set hour to 9
+        - "noon" or "12 PM" → set hour to 12
+        - "midnight" or "12 AM" → set hour to 0
+        - If specific time mentioned, use EXACT time, not defaults
+        - Only use defaults if NO time is mentioned: meetings at 10am, calls at 2pm, dinner at 7pm
+        
+        LOCATION EXTRACTION RULES:
+        - Extract location information from voice notes
+        - Look for keywords: at, in, on, from, to, meet at, dinner at, office, home, etc.
+        - Examples: "meeting at Starbucks", "dinner at Mario's Restaurant", "call from office"
+        - Include full address or establishment name if mentioned
+        - Use null for location if no location mentioned
+        
+        EXAMPLES - STUDY THESE CAREFULLY:
+        - "Buy groceries" → REMINDER (no time, no date, no people - pure personal task)
+        - "Remind me to buy a Mac Apple AirPods Pro" → REMINDER (starts with "remind me", no time/date/people)
+        - "I will need to play soccer with Leo on tomorrow at 5 PM" → CALENDAR EVENT (has Leo + tomorrow + 5 PM)
+        - "I will need to visit Dr. John tomorrow morning 5 AM" → CALENDAR EVENT (has Dr. John + tomorrow + 5 AM)
+        - "Meeting with John tomorrow at 2pm" → CALENDAR EVENT (has John + tomorrow + 2pm)
+        - "Visit Dr. John on 10 AM tomorrow morning" → CALENDAR EVENT (has Dr. John + 10 AM + tomorrow)
+        - "Doctor appointment Friday" → CALENDAR EVENT (has Friday date)
+        - "Call Sarah at 3pm" → CALENDAR EVENT (has Sarah + 3pm)
+        - "Play tennis tomorrow" → CALENDAR EVENT (has tomorrow date)
+        - "Dinner at Mario's tonight" → CALENDAR EVENT (has tonight time)
+        - "Meet Leo for lunch" → CALENDAR EVENT (has Leo person)
+        - "Add to calendar: doctor appointment Friday" → CALENDAR EVENT (contains "calendar")
+        - "Finish the report" → REMINDER (no time, no date, no people - solo task)
+        - "Schedule meeting with team next week" → CALENDAR EVENT (has team + next week)
+        - "Pick up prescription tomorrow" → CALENDAR EVENT (has tomorrow date)
+        - "Study for exam" → REMINDER (no time, no date, no people - solo task)
+        - "Don't forget to buy milk" → REMINDER (starts with "don't forget", no time/date/people)
+        
+        GENERAL RULES:
+        - NEVER use exclamation marks (!, !!, !!!) in titles - they will be removed
+        - Use simple, clean language without dramatic emphasis or punctuation
+        - Keep titles concise (under 50 characters)
+        - Include context in notes if helpful
+        - extractedText should be the original phrase/sentence from transcription
+        - Priority for reminders: 1-9 (1=highest, 5=normal, 9=lowest)
+        - Duration for events in seconds (default 3600 for 1 hour if not specified)
+        
+        Transcription: "\(transcription)"
+        """
+        
+        do {
+            guard let session = session else { return ([], []) }
+            print("📝 [AI Unified] Input transcription: '\(transcription)'")
+            let response = try await session.respond(to: prompt)
+            print("🤖 [AI Unified] Raw response: \(response.content)")
+            let result = parseCategorizedResponse(response.content)
+            print("📊 [AI Unified] Final result: \(result.0.count) reminders, \(result.1.count) calendar events")
+            return result
+        } catch {
+            print("❌ [AI Unified] Error extracting categorized items: \(error)")
+            return ([], [])
+        }
     }
     
     private func extractTodos(from transcription: String) async -> [TodoSuggestion] {
@@ -327,6 +472,104 @@ class AISuggestionService: ObservableObject {
         
         print("✅ [AI Calendar] Parsed \(results.count) calendar items")
         return results
+    }
+    
+    private func parseCategorizedResponse(_ response: String) -> ([TodoSuggestion], [CalendarSuggestion]) {
+        print("🔍 [AI Unified] Parsing response: '\(response)'")
+        
+        // Strip markdown code block wrapper if present
+        let cleanedResponse = response
+            .replacingOccurrences(of: "```json\n", with: "")
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "\n```", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        print("🧹 [AI Unified] Cleaned response: '\(cleanedResponse)'")
+        
+        guard let data = cleanedResponse.data(using: .utf8) else {
+            print("❌ [AI Unified] Failed to convert response to data")
+            return ([], [])
+        }
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            print("❌ [AI Unified] Failed to parse JSON from response")
+            return ([], [])
+        }
+        
+        print("✅ [AI Unified] Successfully parsed JSON: \(json)")
+        
+        // Parse reminders
+        var todos: [TodoSuggestion] = []
+        if let remindersArray = json["reminders"] as? [[String: Any]] {
+            todos = remindersArray.compactMap { todoDict -> TodoSuggestion? in
+                guard let title = todoDict["title"] as? String,
+                      let extractedText = todoDict["extractedText"] as? String else {
+                    print("❌ [AI Unified] Missing required fields in reminder item")
+                    return nil
+                }
+                
+                // Clean up title by removing all exclamation marks and trimming
+                let cleanTitle = title
+                    .components(separatedBy: CharacterSet(charactersIn: "!"))
+                    .joined()
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                print("🧹 [AI Unified] Reminder title cleanup: '\(title)' → '\(cleanTitle)'")
+                
+                return TodoSuggestion(
+                    title: cleanTitle,
+                    notes: todoDict["notes"] as? String,
+                    priority: todoDict["priority"] as? Int,
+                    extractedText: extractedText
+                )
+            }
+        }
+        
+        // Parse calendar events
+        var calendarItems: [CalendarSuggestion] = []
+        if let eventsArray = json["events"] as? [[String: Any]] {
+            let dateFormatter = ISO8601DateFormatter()
+            dateFormatter.timeZone = TimeZone.current // Use local time zone instead of UTC
+            
+            calendarItems = eventsArray.compactMap { eventDict -> CalendarSuggestion? in
+                guard let title = eventDict["title"] as? String,
+                      let extractedText = eventDict["extractedText"] as? String else {
+                    print("❌ [AI Unified] Missing required fields in calendar item")
+                    return nil
+                }
+                
+                let suggestedDate: Date?
+                if let dateString = eventDict["suggestedDate"] as? String {
+                    // Try parsing with local time zone first
+                    suggestedDate = dateFormatter.date(from: dateString) ?? parseRelativeDate(from: dateString, extractedText: extractedText)
+                    print("📅 [AI Unified] Date parsing: '\(dateString)' → \(suggestedDate?.formatted(.dateTime.year().month().day().hour().minute()) ?? "nil") (local time)")
+                } else {
+                    suggestedDate = parseRelativeDate(from: "", extractedText: extractedText)
+                    print("📅 [AI Unified] No date provided, trying to extract from text: '\(extractedText)'")
+                }
+                
+                // Clean up title by removing all exclamation marks and trimming
+                let cleanTitle = title
+                    .components(separatedBy: CharacterSet(charactersIn: "!"))
+                    .joined()
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                print("🧹 [AI Unified] Event title cleanup: '\(title)' → '\(cleanTitle)'")
+                
+                return CalendarSuggestion(
+                    title: cleanTitle,
+                    notes: eventDict["notes"] as? String,
+                    suggestedDate: suggestedDate,
+                    duration: eventDict["duration"] as? TimeInterval,
+                    location: eventDict["location"] as? String,
+                    extractedText: extractedText
+                )
+            }
+        }
+        
+        print("✅ [AI Unified] Parsed \(todos.count) reminders and \(calendarItems.count) calendar events")
+        return (todos, calendarItems)
     }
     
     private func parseRelativeDate(from dateString: String, extractedText: String) -> Date? {
