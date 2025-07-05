@@ -111,14 +111,16 @@ class EventKitService: ObservableObject {
             }
         }
         
-        // Get or create PPNotes reminder list
-        let reminderList = try await getOrCreatePPNotesReminderList()
+        // Use default reminder list
+        guard let defaultReminderList = eventStore.defaultCalendarForNewReminders() else {
+            throw EventKitError.noSourceAvailable
+        }
         
         // Create reminder
         let reminder = EKReminder(eventStore: eventStore)
         reminder.title = todo.title
         reminder.notes = createReminderNotes(for: todo)
-        reminder.calendar = reminderList
+        reminder.calendar = defaultReminderList
         
         // Set priority if available
         if let priority = todo.priority {
@@ -127,38 +129,10 @@ class EventKitService: ObservableObject {
         
         // Save reminder
         try eventStore.save(reminder, commit: true)
-        print("Successfully added reminder: \(todo.title)")
+        print("✅ [EventKit] Successfully added reminder to default list: \(todo.title)")
     }
     
-    private func getOrCreatePPNotesReminderList() async throws -> EKCalendar {
-        // Check if PPNotes reminder list already exists
-        let reminderLists = eventStore.calendars(for: .reminder)
-        
-        if let existingList = reminderLists.first(where: { $0.title == "PPNotes" }) {
-            return existingList
-        }
-        
-        // Create new reminder list
-        let newReminderList = EKCalendar(for: .reminder, eventStore: eventStore)
-        newReminderList.title = "PPNotes"
-        newReminderList.cgColor = UIColor.systemPurple.cgColor
-        
-        // Set source (use default source for reminders)
-        if let defaultSource = eventStore.defaultCalendarForNewReminders()?.source {
-            newReminderList.source = defaultSource
-        } else {
-            // Fallback to first available source
-            let sources = eventStore.sources.filter { $0.sourceType == .local || $0.sourceType == .calDAV }
-            if let source = sources.first {
-                newReminderList.source = source
-            } else {
-                throw EventKitError.noSourceAvailable
-            }
-        }
-        
-        try eventStore.saveCalendar(newReminderList, commit: true)
-        return newReminderList
-    }
+
     
     private func createReminderNotes(for todo: TodoSuggestion) -> String {
         var notes = ""
