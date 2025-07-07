@@ -10,10 +10,16 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = VoiceNotesViewModel()
     @State private var currentLanguageFlag: String = "🇺🇸" // Default to English
+    @State private var columnVisibility = NavigationSplitViewVisibility.automatic
     
     // Determine if we're on iPad
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
+    }
+    
+    // Check if sidebar is visible
+    private var isSidebarVisible: Bool {
+        columnVisibility == .all || columnVisibility == .automatic
     }
     
     var body: some View {
@@ -35,7 +41,7 @@ struct ContentView: View {
     
     // iPad Layout - Split View Design
     private var iPadLayout: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             // Sidebar
             NavigationStack {
                 iPadSidebar
@@ -358,103 +364,31 @@ struct ContentView: View {
                         .padding(.horizontal, 32)
                     }
                     
-                    // Voice Notes Grid - Simple 2x2 Layout for iPad
+                    // Voice Notes Grid - Responsive Layout for iPad
                     let voiceNotes = viewModel.voiceNotes
+                    let columns = isSidebarVisible ? 2 : 3 // 2 columns with sidebar, 3 without
                     
-                    VStack(spacing: 28) {
-                        // First row
-                        HStack(spacing: 28) {
-                            if voiceNotes.count > 0 {
-                                VoiceNoteCard(
-                                    voiceNote: voiceNotes[0],
-                                    index: 0,
-                                    isCurrentlyRecording: false,
-                                    screenWidth: geometry.size.width,
-                                    viewModel: viewModel
-                                )
-                                .id(voiceNotes[0].id)
-                                .frame(maxWidth: .infinity)
-                            }
-                            
-                            if voiceNotes.count > 1 {
-                                VoiceNoteCard(
-                                    voiceNote: voiceNotes[1],
-                                    index: 1,
-                                    isCurrentlyRecording: false,
-                                    screenWidth: geometry.size.width,
-                                    viewModel: viewModel
-                                )
-                                .id(voiceNotes[1].id)
-                                .frame(maxWidth: .infinity)
-                            } else {
-                                Spacer()
-                            }
-                        }
-                        
-                        // Second row
-                        HStack(spacing: 28) {
-                            if voiceNotes.count > 2 {
-                                VoiceNoteCard(
-                                    voiceNote: voiceNotes[2],
-                                    index: 2,
-                                    isCurrentlyRecording: false,
-                                    screenWidth: geometry.size.width,
-                                    viewModel: viewModel
-                                )
-                                .id(voiceNotes[2].id)
-                                .frame(maxWidth: .infinity)
-                            } else {
-                                Spacer()
-                            }
-                            
-                            if voiceNotes.count > 3 {
-                                VoiceNoteCard(
-                                    voiceNote: voiceNotes[3],
-                                    index: 3,
-                                    isCurrentlyRecording: false,
-                                    screenWidth: geometry.size.width,
-                                    viewModel: viewModel
-                                )
-                                .id(voiceNotes[3].id)
-                                .frame(maxWidth: .infinity)
-                            } else {
-                                Spacer()
-                            }
-                        }
-                        
-                        // Additional rows if more than 4 items
-                        if voiceNotes.count > 4 {
-                            ForEach(4..<voiceNotes.count, id: \.self) { index in
-                                if index % 2 == 0 {
-                                    HStack(spacing: 28) {
-                                        VoiceNoteCard(
-                                            voiceNote: voiceNotes[index],
-                                            index: index,
-                                            isCurrentlyRecording: false,
-                                            screenWidth: geometry.size.width,
-                                            viewModel: viewModel
-                                        )
-                                        .id(voiceNotes[index].id)
-                                        .frame(maxWidth: .infinity)
-                                        
-                                        if index + 1 < voiceNotes.count {
-                                            VoiceNoteCard(
-                                                voiceNote: voiceNotes[index + 1],
-                                                index: index + 1,
-                                                isCurrentlyRecording: false,
-                                                screenWidth: geometry.size.width,
-                                                viewModel: viewModel
-                                            )
-                                            .id(voiceNotes[index + 1].id)
-                                            .frame(maxWidth: .infinity)
-                                        } else {
-                                            Spacer()
-                                        }
-                                    }
-                                }
-                            }
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible(), spacing: 28), count: columns),
+                        spacing: 28
+                    ) {
+                        ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
+                            VoiceNoteCard(
+                                voiceNote: voiceNote,
+                                index: index,
+                                isCurrentlyRecording: false,
+                                screenWidth: geometry.size.width,
+                                viewModel: viewModel
+                            )
+                            .id(voiceNote.id)
+                            .frame(maxWidth: .infinity)
+                            .transition(.asymmetric(
+                                insertion: .scale.combined(with: .opacity),
+                                removal: .scale.combined(with: .opacity)
+                            ))
                         }
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 32)
                     
                     Spacer() // Push content to top
