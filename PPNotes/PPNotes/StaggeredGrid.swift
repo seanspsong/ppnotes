@@ -46,13 +46,19 @@ struct AdaptiveGrid<Content: View, T: Identifiable>: View {
     }
     
     var body: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns),
-            spacing: spacing
-        ) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                content(item, index)
-                    .frame(maxWidth: cardWidth)
+        LazyVStack(spacing: spacing) {
+            ForEach(Array(stride(from: 0, to: items.count, by: columns)), id: \.self) { rowIndex in
+                HStack(alignment: .top, spacing: spacing) {
+                    ForEach(0..<columns, id: \.self) { columnIndex in
+                        let itemIndex = rowIndex + columnIndex
+                        if itemIndex < items.count {
+                            content(items[itemIndex], itemIndex)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Spacer()
+                        }
+                    }
+                }
             }
         }
         .padding(.horizontal, spacing)
