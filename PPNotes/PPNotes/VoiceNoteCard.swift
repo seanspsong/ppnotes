@@ -91,11 +91,11 @@ struct VoiceNoteCard: View {
                         }
                 )
         }
-        .padding(14)
+        .padding(16)
         .frame(width: cardWidth(for: screenWidth), height: cardHeight)
         .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
         .rotationEffect(.degrees(rotation))
         .offset(x: shakeOffset)
         .overlay(
