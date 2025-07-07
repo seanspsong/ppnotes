@@ -10,22 +10,15 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = VoiceNotesViewModel()
     @State private var currentLanguageFlag: String = "🇺🇸" // Default to English
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
     
     // Determine if we're on iPad
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
     }
     
-    // Determine if we should use compact layout
-    private var shouldUseCompactLayout: Bool {
-        horizontalSizeClass == .compact || verticalSizeClass == .compact
-    }
-    
     var body: some View {
         Group {
-            if isIPad && !shouldUseCompactLayout {
+            if isIPad {
                 iPadLayout
             } else {
                 iPhoneLayout
@@ -44,10 +37,30 @@ struct ContentView: View {
     private var iPadLayout: some View {
         NavigationSplitView {
             // Sidebar
-            iPadSidebar
+            NavigationStack {
+                iPadSidebar
+            }
         } detail: {
             // Main content area
-            iPadMainContent
+            NavigationStack {
+                iPadMainContent
+                    .toolbar {
+                        ToolbarItem(placement: .primaryAction) {
+                            if viewModel.isDeleteMode {
+                                Button("Done") {
+                                    viewModel.exitDeleteMode()
+                                }
+                                .fontWeight(.semibold)
+                                .foregroundColor(.accentColor)
+                            } else {
+                                NavigationLink(destination: SettingsView()) {
+                                    Image(systemName: "gear")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+            }
         }
         .overlay(
             // Floating recording button at center bottom
@@ -309,7 +322,7 @@ struct ContentView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("")
-        .navigationBarHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     // iPad Main Content
@@ -328,22 +341,8 @@ struct ContentView: View {
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                if viewModel.isDeleteMode {
-                    Button("Done") {
-                        viewModel.exitDeleteMode()
-                    }
-                    .fontWeight(.semibold)
-                    .foregroundColor(.accentColor)
-                } else {
-                    NavigationLink(destination: SettingsView()) {
-                        Image(systemName: "gear")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-        }
+        .navigationTitle("PPnotes")
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     // iPad Main Grid
