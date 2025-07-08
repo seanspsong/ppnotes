@@ -532,7 +532,8 @@ struct PriorityIndicator: View {
             audioFileName: "voice_note_123.m4a",
             duration: 125.0,
             timestamp: Date(),
-            transcription: "I need to call John tomorrow at 3 PM to discuss the project. Also, don't forget to submit the report by Friday and schedule a team meeting for next week."
+            transcription: "I need to call John tomorrow at 3 PM to discuss the project. Also, don't forget to submit the report by Friday and schedule a team meeting for next week.",
+            tags: ["meeting", "work"]
         )
     )
     .padding()

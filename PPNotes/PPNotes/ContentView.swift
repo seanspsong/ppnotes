@@ -117,7 +117,7 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         // Voice Notes Grid
                         ScrollView {
-                            if viewModel.voiceNotes.isEmpty && !viewModel.isAddingNewNote {
+                            if viewModel.filteredVoiceNotes.isEmpty && !viewModel.isAddingNewNote {
                                 emptyStateView
                                     .frame(maxWidth: .infinity, minHeight: geometry.size.height - 200)
                             } else {
@@ -134,7 +134,7 @@ struct ContentView: View {
                                     
                                     // Voice Notes Grid
                                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
-                                        ForEach(Array(viewModel.voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
+                                        ForEach(Array(viewModel.filteredVoiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
                                             VoiceNoteCard(
                                                 voiceNote: voiceNote, 
                                                 index: index,
@@ -147,14 +147,14 @@ struct ContentView: View {
                                                 insertion: .scale.combined(with: .opacity),
                                                 removal: .scale.combined(with: .opacity)
                                             ))
-                                            .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
+                                            .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.filteredVoiceNotes.count)
                                         }
                                     }
                                 }
                                 .padding(.top, 20)
                                 .padding(.bottom, 80) // Bottom padding for floating button clearance
                                 .animation(.spring(response: 1.0, dampingFraction: 0.85), value: viewModel.isAddingNewNote)
-                                .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.voiceNotes.count)
+                                .animation(.spring(response: 1.2, dampingFraction: 0.9), value: viewModel.filteredVoiceNotes.count)
                             }
                         }
                         .clipped() // Prevent content from overflowing
@@ -268,7 +268,168 @@ struct ContentView: View {
             
             // Scrollable content
             ScrollView {
-                LazyVStack(spacing: 16) {
+                LazyVStack(spacing: 20) {
+                    // Calendar Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "calendar")
+                                .font(.title2)
+                                .foregroundColor(.accentColor)
+                            
+                            Text("Calendar")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            if viewModel.selectedDate != nil {
+                                Button(action: {
+                                    viewModel.clearDateFilter()
+                                }) {
+                                    Text("Clear")
+                                        .font(.caption)
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
+                        }
+                        
+                        // Date picker
+                        DatePicker(
+                            "Select Date",
+                            selection: Binding(
+                                get: { viewModel.selectedDate ?? Date() },
+                                set: { viewModel.selectedDate = $0 }
+                            ),
+                            displayedComponents: [.date]
+                        )
+                        .datePickerStyle(CompactDatePickerStyle())
+                        .labelsHidden()
+                        
+                        // Quick date options
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 8) {
+                            ForEach(viewModel.uniqueDates.prefix(6), id: \.self) { date in
+                                Button(action: {
+                                    viewModel.selectedDate = date
+                                }) {
+                                    VStack(spacing: 2) {
+                                        Text(date.formatted(.dateTime.day()))
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                        Text(date.formatted(.dateTime.month(.abbreviated)))
+                                            .font(.caption2)
+                                    }
+                                    .foregroundColor(
+                                        viewModel.selectedDate != nil && 
+                                        Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate!) ? 
+                                        .white : .secondary
+                                    )
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(
+                                                viewModel.selectedDate != nil && 
+                                                Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate!) ? 
+                                                Color.accentColor : Color(.systemGray6)
+                                            )
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Tags Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "tag")
+                                .font(.title2)
+                                .foregroundColor(.accentColor)
+                            
+                            Text("Tags")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            if viewModel.selectedTag != nil {
+                                Button(action: {
+                                    viewModel.clearTagFilter()
+                                }) {
+                                    Text("Clear")
+                                        .font(.caption)
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
+                        }
+                        
+                        if viewModel.uniqueTags.isEmpty {
+                            VStack(spacing: 8) {
+                                Image(systemName: "tag.slash")
+                                    .font(.title3)
+                                    .foregroundColor(.secondary.opacity(0.5))
+                                
+                                Text("No tags yet")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("Add tags to your voice notes to organize them")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemGray6))
+                            )
+                        } else {
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 8) {
+                                ForEach(viewModel.uniqueTags, id: \.self) { tag in
+                                    Button(action: {
+                                        if viewModel.selectedTag == tag {
+                                            viewModel.clearTagFilter()
+                                        } else {
+                                            viewModel.selectedTag = tag
+                                        }
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "tag.fill")
+                                                .font(.caption2)
+                                            
+                                            Text(tag)
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                        }
+                                        .foregroundColor(
+                                            viewModel.selectedTag == tag ? .white : .secondary
+                                        )
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 8)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(
+                                                    viewModel.selectedTag == tag ? 
+                                                    Color.accentColor : Color(.systemGray6)
+                                                )
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
                     // Quick stats
                     if !viewModel.voiceNotes.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
@@ -277,7 +438,7 @@ struct ContentView: View {
                                     .font(.headline)
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Text("\(viewModel.voiceNotes.count)")
+                                Text("\(viewModel.filteredVoiceNotes.count)")
                                     .font(.headline)
                                     .fontWeight(.semibold)
                                     .foregroundColor(.primary)
@@ -288,13 +449,12 @@ struct ContentView: View {
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Text(totalDuration)
+                                Text(filteredTotalDuration)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(.primary)
                             }
                         }
-                        .padding(.horizontal, 20)
                         .padding(.vertical, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
@@ -302,14 +462,6 @@ struct ContentView: View {
                         )
                         .padding(.horizontal, 20)
                     }
-                    
-                    // Notes list
-                    LazyVStack(spacing: 12) {
-                        ForEach(viewModel.voiceNotes) { note in
-                            iPadSidebarNoteRow(note: note)
-                        }
-                    }
-                    .padding(.horizontal, 20)
                     
                     // Bottom spacing
                     Rectangle()
@@ -405,7 +557,7 @@ struct ContentView: View {
     // iPad Main Grid
     private func iPadMainGrid(geometry: GeometryProxy) -> some View {
         ScrollView {
-            if viewModel.voiceNotes.isEmpty && !viewModel.isAddingNewNote {
+            if viewModel.filteredVoiceNotes.isEmpty && !viewModel.isAddingNewNote {
                 emptyStateView
                     .frame(maxWidth: .infinity, minHeight: geometry.size.height - 100)
             } else {
@@ -429,7 +581,7 @@ struct ContentView: View {
                     }
                     
                     // Voice Notes Grid - Beautiful Dynamic Layout for iPad
-                    let voiceNotes = viewModel.voiceNotes
+                    let voiceNotes = viewModel.filteredVoiceNotes
                     let isHorizontal = geometry.size.width > geometry.size.height
                     
                     // Determine grid columns based on orientation and sidebar
@@ -708,6 +860,12 @@ struct ContentView: View {
         return "\(minutes):\(String(format: "%02d", seconds))"
     }
     
+    private var filteredTotalDuration: String {
+        let total = viewModel.filteredVoiceNotes.reduce(0) { $0 + $1.duration }
+        let minutes = Int(total) / 60
+        let seconds = Int(total) % 60
+        return "\(minutes):\(String(format: "%02d", seconds))"
+    }
 
     
     private func loadCurrentLanguageFlag() {

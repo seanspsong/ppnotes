@@ -318,7 +318,8 @@ struct VoiceNoteCard: View {
             audioFileName: "test.m4a",
             duration: 125.5,
             timestamp: Date(),
-            transcription: ""
+            transcription: "",
+            tags: ["meeting", "work"]
         ),
         index: 0,
         isCurrentlyRecording: false,

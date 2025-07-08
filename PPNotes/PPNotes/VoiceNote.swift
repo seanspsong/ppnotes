@@ -14,23 +14,26 @@ struct VoiceNote: Identifiable, Codable {
     let duration: TimeInterval
     let timestamp: Date
     let transcription: String
+    let tags: [String]
     
-    init(title: String, audioFileName: String, duration: TimeInterval, timestamp: Date, transcription: String) {
+    init(title: String, audioFileName: String, duration: TimeInterval, timestamp: Date, transcription: String, tags: [String] = []) {
         self.id = UUID()
         self.title = title
         self.audioFileName = audioFileName
         self.duration = duration
         self.timestamp = timestamp
         self.transcription = transcription
+        self.tags = tags
     }
     
-    init(id: UUID, title: String, audioFileName: String, duration: TimeInterval, timestamp: Date, transcription: String) {
+    init(id: UUID, title: String, audioFileName: String, duration: TimeInterval, timestamp: Date, transcription: String, tags: [String] = []) {
         self.id = id
         self.title = title
         self.audioFileName = audioFileName
         self.duration = duration
         self.timestamp = timestamp
         self.transcription = transcription
+        self.tags = tags
     }
     
     var formattedDuration: String {

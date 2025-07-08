@@ -29,6 +29,11 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
     @Published var sourceCardFrame: CGRect = .zero
     @Published var animateFromSource = false
     
+    // Filter state
+    @Published var selectedDate: Date? = nil
+    @Published var selectedTag: String? = nil
+    @Published var isShowingDatePicker = false
+    
     private var pausedNoteId: UUID?
     
     // Title Generation Service
@@ -170,7 +175,8 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
             audioFileName: fileName,
             duration: duration,
             timestamp: Date(),
-            transcription: ""
+            transcription: "",
+            tags: []
         )
         
         // Add the voice note immediately and start transcription
@@ -582,7 +588,8 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
                 audioFileName: voiceNotes[index].audioFileName,
                 duration: voiceNotes[index].duration,
                 timestamp: voiceNotes[index].timestamp,
-                transcription: transcription
+                transcription: transcription,
+                tags: voiceNotes[index].tags
             )
             saveVoiceNotes()
         }
@@ -645,7 +652,8 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
                 audioFileName: voiceNotes[index].audioFileName,
                 duration: voiceNotes[index].duration,
                 timestamp: voiceNotes[index].timestamp,
-                transcription: voiceNotes[index].transcription
+                transcription: voiceNotes[index].transcription,
+                tags: voiceNotes[index].tags
             )
             
             saveVoiceNotes()
@@ -712,7 +720,8 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
                         audioFileName: voiceNotes[index].audioFileName,
                         duration: voiceNotes[index].duration,
                         timestamp: voiceNotes[index].timestamp,
-                        transcription: voiceNotes[index].transcription
+                        transcription: voiceNotes[index].transcription,
+                        tags: voiceNotes[index].tags
                     )
                 }
             }
@@ -988,6 +997,96 @@ class VoiceNotesViewModel: NSObject, ObservableObject {
         if voiceNotes.isEmpty {
             exitDeleteMode()
         }
+    }
+    
+    // MARK: - Filtering Methods
+    
+    var filteredVoiceNotes: [VoiceNote] {
+        var filtered = voiceNotes
+        
+        // Filter by date
+        if let selectedDate = selectedDate {
+            filtered = filtered.filter { Calendar.current.isDate($0.timestamp, inSameDayAs: selectedDate) }
+        }
+        
+        // Filter by tag
+        if let selectedTag = selectedTag {
+            filtered = filtered.filter { $0.tags.contains(selectedTag) }
+        }
+        
+        return filtered
+    }
+    
+    var uniqueTags: [String] {
+        let allTags = voiceNotes.flatMap { $0.tags }
+        return Array(Set(allTags)).sorted()
+    }
+    
+    var uniqueDates: [Date] {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        let uniqueDateStrings = Set(voiceNotes.map { note in
+            dateFormatter.string(from: note.timestamp)
+        })
+        
+        return uniqueDateStrings.compactMap { dateFormatter.date(from: $0) }
+            .sorted(by: { $0 > $1 })
+    }
+    
+    func clearDateFilter() {
+        selectedDate = nil
+    }
+    
+    func clearTagFilter() {
+        selectedTag = nil
+    }
+    
+    func clearAllFilters() {
+        selectedDate = nil
+        selectedTag = nil
+    }
+    
+    func addTag(to noteId: UUID, tag: String) {
+        guard let index = voiceNotes.firstIndex(where: { $0.id == noteId }) else { return }
+        let note = voiceNotes[index]
+        
+        var newTags = note.tags
+        if !newTags.contains(tag) {
+            newTags.append(tag)
+            newTags.sort()
+        }
+        
+        voiceNotes[index] = VoiceNote(
+            id: note.id,
+            title: note.title,
+            audioFileName: note.audioFileName,
+            duration: note.duration,
+            timestamp: note.timestamp,
+            transcription: note.transcription,
+            tags: newTags
+        )
+        
+        saveVoiceNotes()
+    }
+    
+    func removeTag(from noteId: UUID, tag: String) {
+        guard let index = voiceNotes.firstIndex(where: { $0.id == noteId }) else { return }
+        let note = voiceNotes[index]
+        
+        let newTags = note.tags.filter { $0 != tag }
+        
+        voiceNotes[index] = VoiceNote(
+            id: note.id,
+            title: note.title,
+            audioFileName: note.audioFileName,
+            duration: note.duration,
+            timestamp: note.timestamp,
+            transcription: note.transcription,
+            tags: newTags
+        )
+        
+        saveVoiceNotes()
     }
 }
 

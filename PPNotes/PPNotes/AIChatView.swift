@@ -333,6 +333,7 @@ struct ChatMessageBubble: View {
         audioFileName: "test.m4a",
         duration: 125.0,
         timestamp: Date(),
-        transcription: "This is a sample transcription of a voice note. It contains important meeting details and action items that we discussed during our team call."
+        transcription: "This is a sample transcription of a voice note. It contains important meeting details and action items that we discussed during our team call.",
+        tags: ["meeting", "work"]
     ))
 } 

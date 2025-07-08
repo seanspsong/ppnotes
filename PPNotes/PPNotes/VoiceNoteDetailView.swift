@@ -31,6 +31,8 @@ struct VoiceNoteDetailContent: View {
     let voiceNote: VoiceNote
     @ObservedObject var viewModel: VoiceNotesViewModel
     @State private var showingAIChat = false
+    @State private var showingAddTag = false
+    @State private var newTag = ""
     
     private var isPlaying: Bool {
         viewModel.currentlyPlayingId == voiceNote.id
@@ -38,6 +40,11 @@ struct VoiceNoteDetailContent: View {
     
     private var isPaused: Bool {
         viewModel.isNotePaused(voiceNote.id)
+    }
+    
+    private var predefinedTags: [String] {
+        let allTags = ["meeting", "work", "personal", "idea", "reminder", "todo", "call", "note", "important", "project"]
+        return allTags.filter { !voiceNote.tags.contains($0) }
     }
     
     var body: some View {
@@ -73,6 +80,152 @@ struct VoiceNoteDetailContent: View {
                     )
             }
             .padding(.horizontal, 20)
+            
+            // Tags section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Tags")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingAddTag = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.caption)
+                            Text("Add Tag")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.accentColor.opacity(0.1))
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                if voiceNote.tags.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "tag.slash")
+                            .font(.title3)
+                            .foregroundColor(.secondary.opacity(0.5))
+                        
+                        Text("No tags")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Add tags to organize your voice notes")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                    )
+                } else {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 8) {
+                        ForEach(voiceNote.tags, id: \.self) { tag in
+                            HStack(spacing: 4) {
+                                Image(systemName: "tag.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.accentColor)
+                                
+                                Text(tag)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                
+                                Button(action: {
+                                    viewModel.removeTag(from: voiceNote.id, tag: tag)
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(.systemGray6))
+                            )
+                        }
+                    }
+                }
+                
+                // Predefined tags section
+                if !predefinedTags.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Quick Tags")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 8) {
+                            ForEach(predefinedTags, id: \.self) { tag in
+                                Button(action: {
+                                    viewModel.addTag(to: voiceNote.id, tag: tag)
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "plus.circle")
+                                            .font(.caption2)
+                                        
+                                        Text(tag)
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(.accentColor)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.accentColor.opacity(0.1))
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .disabled(voiceNote.tags.contains(tag))
+                                .opacity(voiceNote.tags.contains(tag) ? 0.5 : 1.0)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .alert("Add Tag", isPresented: $showingAddTag) {
+                TextField("Tag name", text: $newTag)
+                    .textInputAutocapitalization(.words)
+                
+                Button("Add") {
+                    if !newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        viewModel.addTag(to: voiceNote.id, tag: newTag.trimmingCharacters(in: .whitespacesAndNewlines))
+                        newTag = ""
+                    }
+                }
+                .disabled(newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                
+                Button("Cancel", role: .cancel) {
+                    newTag = ""
+                }
+            } message: {
+                Text("Enter a tag name to organize your voice notes")
+            }
             
             // Audio playback section
             VStack(alignment: .leading, spacing: 16) {
@@ -664,7 +817,8 @@ struct iPadCalendarSuggestionCard: View {
                 audioFileName: "test.m4a",
                 duration: 30,
                 timestamp: Date(),
-                transcription: "Test transcription"
+                transcription: "Test transcription",
+                tags: ["test"]
             ),
             viewModel: VoiceNotesViewModel()
         )
