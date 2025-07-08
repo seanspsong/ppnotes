@@ -393,7 +393,6 @@ struct ContentView: View {
                     } else {
                         // Without sidebar: 4 columns layout - 20% width each
                         let cardWidth = geometry.size.width * 0.2
-                        let _ = print("🎨 iPad Layout - Screen width: \(geometry.size.width), Card width: \(cardWidth), Sidebar visible: \(isSidebarVisible)")
                         
                         LazyVGrid(
                             columns: Array(repeating: GridItem(.fixed(cardWidth), spacing: 20), count: 4),
