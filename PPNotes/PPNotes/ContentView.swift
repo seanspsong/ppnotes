@@ -358,65 +358,64 @@ struct ContentView: View {
                     if viewModel.isAddingNewNote {
                         HStack {
                             ProcessingCard(isRecording: viewModel.isRecording, screenWidth: geometry.size.width)
+                                .scaleEffect(0.95)
+                                .rotationEffect(.degrees(-2))
+                                .shadow(
+                                    color: Color.black.opacity(0.2),
+                                    radius: 12,
+                                    x: -2,
+                                    y: 4
+                                )
                                 .transition(.scale.combined(with: .opacity))
                             Spacer()
                         }
-                        .padding(.horizontal, 32)
+                        .padding(.horizontal, 40)
                     }
                     
-                    // Voice Notes Grid - Responsive Layout for iPad
+                    // Voice Notes Grid - Beautiful Dynamic Layout for iPad
                     let voiceNotes = viewModel.voiceNotes
+                    let isHorizontal = geometry.size.width > geometry.size.height
                     
-                    if isSidebarVisible {
-                        // With sidebar: 2 columns layout
-                        LazyVGrid(
-                            columns: Array(repeating: GridItem(.flexible(), spacing: 28), count: 2),
-                            spacing: 28
-                        ) {
-                            ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
-                                VoiceNoteCard(
-                                    voiceNote: voiceNote,
-                                    index: index,
-                                    isCurrentlyRecording: false,
-                                    screenWidth: geometry.size.width,
-                                    viewModel: viewModel
-                                )
-                                .id(voiceNote.id)
-                                .frame(maxWidth: .infinity)
-                                .transition(.asymmetric(
-                                    insertion: .scale.combined(with: .opacity),
-                                    removal: .scale.combined(with: .opacity)
-                                ))
-                            }
+                    // Determine grid columns based on orientation and sidebar
+                    let columnCount: Int = {
+                        if isHorizontal {
+                            return isSidebarVisible ? 3 : 4  // Horizontal: 3 with sidebar, 4 without
+                        } else {
+                            return isSidebarVisible ? 2 : 3  // Vertical: 2 with sidebar, 3 without
                         }
-                        .padding(.horizontal, 32)
-                    } else {
-                        // Without sidebar: 4 columns layout - 20% width each
-                        let cardWidth = geometry.size.width * 0.2
-                        
-                        LazyVGrid(
-                            columns: Array(repeating: GridItem(.fixed(cardWidth), spacing: 20), count: 4),
-                            spacing: 28
-                        ) {
-                            ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
-                                VoiceNoteCard(
-                                    voiceNote: voiceNote,
-                                    index: index,
-                                    isCurrentlyRecording: false,
-                                    screenWidth: geometry.size.width,
-                                    viewModel: viewModel
-                                )
-                                .id(voiceNote.id)
-                                .frame(width: cardWidth, height: 140)
-                                .clipped()
-                                .transition(.asymmetric(
-                                    insertion: .scale.combined(with: .opacity),
-                                    removal: .scale.combined(with: .opacity)
-                                ))
-                            }
+                    }()
+                    
+                    // Create beautiful staggered grid with random transforms
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible(minimum: 120, maximum: 200), spacing: 24), count: columnCount),
+                        spacing: 32
+                    ) {
+                        ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
+                            VoiceNoteCard(
+                                voiceNote: voiceNote,
+                                index: index,
+                                isCurrentlyRecording: false,
+                                screenWidth: geometry.size.width,
+                                viewModel: viewModel
+                            )
+                            .id(voiceNote.id)
+                            .scaleEffect(randomScale(for: index))
+                            .rotationEffect(.degrees(randomRotation(for: index)))
+                            .offset(x: randomOffset(for: index), y: randomOffset(for: index, isY: true))
+                            .shadow(
+                                color: Color.black.opacity(0.15),
+                                radius: 10,
+                                x: randomShadowX(for: index),
+                                y: randomShadowY(for: index)
+                            )
+                            .transition(.asymmetric(
+                                insertion: .scale.combined(with: .opacity),
+                                removal: .scale.combined(with: .opacity)
+                            ))
+                            .animation(.spring(response: 0.8, dampingFraction: 0.8, blendDuration: 0.2), value: voiceNotes.count)
                         }
-                        .padding(.horizontal, 32)
                     }
+                    .padding(.horizontal, 40)
                     
                     Spacer() // Push content to top
                 }
@@ -575,29 +574,106 @@ struct ContentView: View {
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 32) {
             Spacer()
             
-            // Empty state illustration
-            Image(systemName: "mic.circle")
-                .font(.system(size: 80))
-                .foregroundColor(.secondary.opacity(0.5))
-            
-            VStack(spacing: 8) {
-                Text("No Voice Notes Yet")
-                    .font(.title2)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
+            // Beautiful empty state illustration
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.accentColor.opacity(0.1),
+                                Color.accentColor.opacity(0.05)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 140, height: 140)
+                    .scaleEffect(1.2)
+                    .blur(radius: 20)
                 
-                Text("Press and hold the microphone button to record your first voice note")
+                Image(systemName: "mic.circle.fill")
+                    .font(.system(size: 80, weight: .light))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.accentColor.opacity(0.8),
+                                Color.accentColor.opacity(0.4)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .rotationEffect(.degrees(-5))
+                    .shadow(color: Color.accentColor.opacity(0.3), radius: 20, x: 0, y: 10)
+            }
+            
+            VStack(spacing: 16) {
+                Text("No Voice Notes Yet")
+                    .font(.title)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.primary,
+                                Color.primary.opacity(0.8)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                
+                Text("Press and hold the microphone button to record your first voice note and start your audio journal")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 60)
             }
             
             Spacer()
         }
+        .scaleEffect(0.9)
+        .rotationEffect(.degrees(1))
+    }
+    
+    // MARK: - Beautiful Card Transform Functions
+    
+    /// Generate consistent random scale for each card based on index
+    private func randomScale(for index: Int) -> CGFloat {
+        let seed = abs(index.hashValue)
+        let randomValue = Double((seed % 100)) / 100.0
+        return CGFloat(0.85 + randomValue * 0.3) // Scale between 0.85 and 1.15
+    }
+    
+    /// Generate consistent random rotation for each card based on index
+    private func randomRotation(for index: Int) -> Double {
+        let seed = abs((index * 17).hashValue)
+        let randomValue = Double((seed % 100)) / 100.0
+        return (randomValue - 0.5) * 12 // Rotation between -6 and +6 degrees
+    }
+    
+    /// Generate consistent random offset for each card based on index
+    private func randomOffset(for index: Int, isY: Bool = false) -> CGFloat {
+        let seed = abs((index * (isY ? 23 : 19)).hashValue)
+        let randomValue = Double((seed % 100)) / 100.0
+        return CGFloat((randomValue - 0.5) * 16) // Offset between -8 and +8 points
+    }
+    
+    /// Generate consistent random shadow X offset
+    private func randomShadowX(for index: Int) -> CGFloat {
+        let seed = abs((index * 31).hashValue)
+        let randomValue = Double((seed % 100)) / 100.0
+        return CGFloat((randomValue - 0.5) * 6) // Shadow X between -3 and +3
+    }
+    
+    /// Generate consistent random shadow Y offset
+    private func randomShadowY(for index: Int) -> CGFloat {
+        let seed = abs((index * 37).hashValue)
+        let randomValue = Double((seed % 100)) / 100.0
+        return CGFloat(2 + randomValue * 4) // Shadow Y between 2 and 6
     }
 }
 
@@ -672,14 +748,32 @@ struct ProcessingCard: View {
                     Spacer()
                 }
             }
-            .padding(16)
-            .frame(width: cardWidth, height: 140)
-            .background(Color(.secondarySystemBackground))
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .padding(20)
+            .frame(width: cardWidth, height: 160)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        isRecording ? Color.red.opacity(0.1) : Color.accentColor.opacity(0.1),
+                        Color(.secondarySystemBackground)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .cornerRadius(20)
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke((isRecording ? Color.red : Color.accentColor).opacity(0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                (isRecording ? Color.red : Color.accentColor).opacity(0.6),
+                                (isRecording ? Color.red : Color.accentColor).opacity(0.2)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
             )
             .onAppear {
                 isAnimating = true
