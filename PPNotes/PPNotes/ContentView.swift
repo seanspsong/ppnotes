@@ -333,17 +333,73 @@ struct ContentView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
                 
-                if let selectedNote = viewModel.selectedNoteForDetail {
-                    // Show detail view
-                    iPadDetailView(note: selectedNote, geometry: geometry)
-                } else {
-                    // Show main grid
-                    iPadMainGrid(geometry: geometry)
-                }
+                // Always show main grid as background
+                iPadMainGrid(geometry: geometry)
             }
         }
         .navigationTitle("PPnotes")
         .navigationBarTitleDisplayMode(.inline)
+        .overlay(
+            // Beautiful animated overlay for voice note detail (same as iPhone)
+            Group {
+                if let selectedNote = viewModel.selectedNoteForDetail {
+                    GeometryReader { screenGeometry in
+                        ZStack {
+                            // Semi-transparent background
+                            Color.black.opacity(0.4)
+                                .ignoresSafeArea()
+                                .onTapGesture {
+                                    print("🎬 iPad: Dismissing detail view...")
+                                    withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                                        viewModel.animateFromSource = false
+                                    }
+                                    
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                        viewModel.selectedNoteForDetail = nil
+                                    }
+                                }
+                            
+                            // Animated detail view - zoom from source card
+                            iPadAnimatedDetailView(note: selectedNote, geometry: screenGeometry)
+                                .frame(
+                                    width: viewModel.animateFromSource ? 
+                                        (screenGeometry.size.width - 60) : viewModel.sourceCardFrame.width,
+                                    height: viewModel.animateFromSource ? 
+                                        (screenGeometry.size.height - 100) : viewModel.sourceCardFrame.height
+                                )
+                                .scaleEffect(viewModel.animateFromSource ? 1.0 : randomScale(for: selectedNote.id.hashValue))
+                                .rotationEffect(.degrees(viewModel.animateFromSource ? 0 : randomRotation(for: selectedNote.id.hashValue)))
+                                .opacity(viewModel.animateFromSource ? 1.0 : 0.6)
+                                .offset(
+                                    x: viewModel.animateFromSource ? 0 : 
+                                        (viewModel.sourceCardFrame.midX - screenGeometry.size.width / 2),
+                                    y: viewModel.animateFromSource ? 0 : 
+                                        (viewModel.sourceCardFrame.midY - screenGeometry.size.height / 2)
+                                )
+                                .shadow(
+                                    color: Color.black.opacity(viewModel.animateFromSource ? 0.25 : 0.15),
+                                    radius: viewModel.animateFromSource ? 20 : 10,
+                                    x: viewModel.animateFromSource ? 0 : randomShadowX(for: selectedNote.id.hashValue),
+                                    y: viewModel.animateFromSource ? 10 : randomShadowY(for: selectedNote.id.hashValue)
+                                )
+                                .onAppear {
+                                    print("🎬 iPad: Detail view appeared, animateFromSource: \(viewModel.animateFromSource)")
+                                    print("🎬 iPad: Source frame: \(viewModel.sourceCardFrame)")
+                                    
+                                    // Small delay to ensure the initial state is visible
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        print("🎬 iPad: Starting zoom animation...")
+                                        withAnimation(.spring(response: 0.9, dampingFraction: 0.75)) {
+                                            viewModel.animateFromSource = true
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                    .transition(.opacity)
+                }
+            }
+        )
     }
     
     // iPad Main Grid
@@ -428,7 +484,114 @@ struct ContentView: View {
         }
     }
     
-    // iPad Detail View
+    // iPad Animated Detail View (for overlay animation)
+    private func iPadAnimatedDetailView(note: VoiceNote, geometry: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            // Beautiful header with close button
+            HStack {
+                Button(action: {
+                    print("🎬 iPad: Close button tapped")
+                    withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                        viewModel.animateFromSource = false
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        viewModel.selectedNoteForDetail = nil
+                    }
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.secondary.opacity(0.8),
+                                    Color.secondary.opacity(0.6)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .background(
+                            Circle()
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        )
+                }
+                
+                Spacer()
+                
+                Text(note.title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                Button(action: {
+                    // Share functionality
+                }) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.title2)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.accentColor.opacity(0.8),
+                                    Color.accentColor.opacity(0.6)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .background(
+                            Circle()
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        )
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(.systemBackground),
+                        Color(.systemGroupedBackground).opacity(0.5)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            
+            // Content area
+            ScrollView {
+                VoiceNoteDetailContent(voiceNote: note, viewModel: viewModel)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 20)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.accentColor.opacity(0.3),
+                            Color.accentColor.opacity(0.1)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+    }
+    
+    // iPad Detail View (legacy - keep for reference)
     private func iPadDetailView(note: VoiceNote, geometry: GeometryProxy) -> some View {
         HStack(spacing: 0) {
             // Left side - Note content
@@ -643,36 +806,41 @@ struct ContentView: View {
     
     /// Generate consistent random scale for each card based on index
     private func randomScale(for index: Int) -> CGFloat {
-        let seed = abs(index.hashValue)
-        let randomValue = Double((seed % 100)) / 100.0
+        let seed = abs(index) % 100
+        let randomValue = Double(seed) / 100.0
         return CGFloat(0.85 + randomValue * 0.3) // Scale between 0.85 and 1.15
     }
     
     /// Generate consistent random rotation for each card based on index
     private func randomRotation(for index: Int) -> Double {
-        let seed = abs((index * 17).hashValue)
-        let randomValue = Double((seed % 100)) / 100.0
+        let adjustedIndex = (abs(index) % 100) + 17
+        let seed = adjustedIndex % 100
+        let randomValue = Double(seed) / 100.0
         return (randomValue - 0.5) * 12 // Rotation between -6 and +6 degrees
     }
     
     /// Generate consistent random offset for each card based on index
     private func randomOffset(for index: Int, isY: Bool = false) -> CGFloat {
-        let seed = abs((index * (isY ? 23 : 19)).hashValue)
-        let randomValue = Double((seed % 100)) / 100.0
+        let multiplier = isY ? 23 : 19
+        let adjustedIndex = (abs(index) % 100) + multiplier
+        let seed = adjustedIndex % 100
+        let randomValue = Double(seed) / 100.0
         return CGFloat((randomValue - 0.5) * 16) // Offset between -8 and +8 points
     }
     
     /// Generate consistent random shadow X offset
     private func randomShadowX(for index: Int) -> CGFloat {
-        let seed = abs((index * 31).hashValue)
-        let randomValue = Double((seed % 100)) / 100.0
+        let adjustedIndex = (abs(index) % 100) + 31
+        let seed = adjustedIndex % 100
+        let randomValue = Double(seed) / 100.0
         return CGFloat((randomValue - 0.5) * 6) // Shadow X between -3 and +3
     }
     
     /// Generate consistent random shadow Y offset
     private func randomShadowY(for index: Int) -> CGFloat {
-        let seed = abs((index * 37).hashValue)
-        let randomValue = Double((seed % 100)) / 100.0
+        let adjustedIndex = (abs(index) % 100) + 37
+        let seed = adjustedIndex % 100
+        let randomValue = Double(seed) / 100.0
         return CGFloat(2 + randomValue * 4) // Shadow Y between 2 and 6
     }
 }
