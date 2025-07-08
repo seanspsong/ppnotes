@@ -8,10 +8,50 @@ PPNotes (Personal & Private Notes) is an iOS app for taking voice notes using Ap
 
 ## Features
 
-- 🎙️ Voice note recording
+- 🎙️ Voice note recording with push-to-talk
 - 🤖 On-device LLM transcription (iOS 26)
 - 🔒 Complete privacy - no cloud, no servers
 - 📱 Native iOS experience
+- 🌍 Multi-language support (7 languages)
+- 🎨 Beautiful staggered card layout with random transforms
+- 📱 Responsive iPad layout with orientation support
+- ✨ Smooth zoom animations and transitions
+- 🎵 Audio playback with waveform visualization
+- 🗑️ Delete mode with intuitive long-press gestures
+- 📅 Calendar event integration (EventKit)
+- 💡 AI-powered content suggestions
+- 🎯 Auto-generated smart titles from transcription
+
+## iPad Experience
+
+PPNotes features a specially designed iPad interface that adapts beautifully to different orientations and screen sizes:
+
+### Dynamic Grid Layout
+- **Responsive Design**: Automatically adjusts to screen size and orientation
+- **Sidebar-Aware**: Adapts column count based on split view configuration
+- **Layout Matrix**:
+  - Vertical iPad (sidebar visible): 2 cards per row
+  - Vertical iPad (sidebar hidden): 3 cards per row  
+  - Horizontal iPad (sidebar visible): 3 cards per row
+  - Horizontal iPad (sidebar hidden): 4 cards per row
+
+### Beautiful Visual Design
+- **Random Transforms**: Each card has unique rotation, scale, and positioning
+- **Pinterest-Style Layout**: Cards arranged with natural, organic feel
+- **Consistent Randomization**: Transform values based on card index for repeatability
+- **Enhanced Shadows**: Dynamic shadows that respond to card positioning
+- **Smooth Animations**: Spring-based animations throughout the interface
+
+### iPad-Optimized Navigation
+- **Zoom-from-Source Animation**: Detailed views zoom from their source card
+- **Modal Presentation**: Beautiful 24pt rounded corners with gradient headers
+- **Gesture Dismissal**: Swipe down to dismiss with reverse animation
+- **Maintains Context**: Cards keep their unique transforms during navigation
+
+### Touch-Optimized Interactions
+- **Flexible Grid Items**: Cards resize between 120-200pt for optimal touch targets
+- **Enhanced Spacing**: 32pt row spacing, 24pt column spacing for comfortable interaction
+- **Visual Feedback**: Immediate response to touch with proper animation feedback
 
 ## Requirements
 
