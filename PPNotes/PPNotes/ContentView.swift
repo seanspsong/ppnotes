@@ -19,7 +19,7 @@ struct ContentView: View {
     
     // Check if sidebar is visible
     private var isSidebarVisible: Bool {
-        columnVisibility == .all || columnVisibility == .automatic
+        columnVisibility != .detailOnly
     }
     
     var body: some View {
@@ -125,7 +125,7 @@ struct ContentView: View {
                                     // Recording/Processing card (shows while recording or processing)
                                     if viewModel.isAddingNewNote {
                                         HStack {
-                                            ProcessingCard(isRecording: viewModel.isRecording)
+                                            ProcessingCard(isRecording: viewModel.isRecording, screenWidth: geometry.size.width)
                                                 .transition(.scale.combined(with: .opacity))
                                             Spacer()
                                         }
@@ -357,7 +357,7 @@ struct ContentView: View {
                     // Recording/Processing card
                     if viewModel.isAddingNewNote {
                         HStack {
-                            ProcessingCard(isRecording: viewModel.isRecording)
+                            ProcessingCard(isRecording: viewModel.isRecording, screenWidth: geometry.size.width)
                                 .transition(.scale.combined(with: .opacity))
                             Spacer()
                         }
@@ -366,30 +366,58 @@ struct ContentView: View {
                     
                     // Voice Notes Grid - Responsive Layout for iPad
                     let voiceNotes = viewModel.voiceNotes
-                    let columns = isSidebarVisible ? 2 : 3 // 2 columns with sidebar, 3 without
                     
-                    LazyVGrid(
-                        columns: Array(repeating: GridItem(.flexible(), spacing: 28), count: columns),
-                        spacing: 28
-                    ) {
-                        ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
-                            VoiceNoteCard(
-                                voiceNote: voiceNote,
-                                index: index,
-                                isCurrentlyRecording: false,
-                                screenWidth: geometry.size.width,
-                                viewModel: viewModel
-                            )
-                            .id(voiceNote.id)
-                            .frame(maxWidth: .infinity)
-                            .transition(.asymmetric(
-                                insertion: .scale.combined(with: .opacity),
-                                removal: .scale.combined(with: .opacity)
-                            ))
+                    if isSidebarVisible {
+                        // With sidebar: 2 columns layout
+                        LazyVGrid(
+                            columns: Array(repeating: GridItem(.flexible(), spacing: 28), count: 2),
+                            spacing: 28
+                        ) {
+                            ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
+                                VoiceNoteCard(
+                                    voiceNote: voiceNote,
+                                    index: index,
+                                    isCurrentlyRecording: false,
+                                    screenWidth: geometry.size.width,
+                                    viewModel: viewModel
+                                )
+                                .id(voiceNote.id)
+                                .frame(maxWidth: .infinity)
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity),
+                                    removal: .scale.combined(with: .opacity)
+                                ))
+                            }
                         }
+                        .padding(.horizontal, 32)
+                    } else {
+                        // Without sidebar: 4 columns layout - 20% width each
+                        let cardWidth = geometry.size.width * 0.2
+                        let _ = print("🎨 iPad Layout - Screen width: \(geometry.size.width), Card width: \(cardWidth), Sidebar visible: \(isSidebarVisible)")
+                        
+                        LazyVGrid(
+                            columns: Array(repeating: GridItem(.fixed(cardWidth), spacing: 20), count: 4),
+                            spacing: 28
+                        ) {
+                            ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, voiceNote in
+                                VoiceNoteCard(
+                                    voiceNote: voiceNote,
+                                    index: index,
+                                    isCurrentlyRecording: false,
+                                    screenWidth: geometry.size.width,
+                                    viewModel: viewModel
+                                )
+                                .id(voiceNote.id)
+                                .frame(width: cardWidth, height: 140)
+                                .clipped()
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity),
+                                    removal: .scale.combined(with: .opacity)
+                                ))
+                            }
+                        }
+                        .padding(.horizontal, 32)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 32)
                     
                     Spacer() // Push content to top
                 }
@@ -577,83 +605,86 @@ struct ContentView: View {
 // Processing Card shown while recording or creating new voice note
 struct ProcessingCard: View {
     let isRecording: Bool
+    let screenWidth: CGFloat
     @State private var isAnimating = false
     
     var body: some View {
+        let cardWidth = screenWidth * 0.20
+        
         VStack(alignment: .leading, spacing: 8) {
-            // Header with status indicator
-            HStack {
-                Spacer()
-                HStack(spacing: 4) {
-                    Text(isRecording ? "Recording" : "Processing")
-                        .font(.caption)
-                        .foregroundColor(isRecording ? .red : .secondary)
-                    
-                    // Animated dots
-                    HStack(spacing: 2) {
-                        ForEach(0..<3) { index in
-                            Circle()
-                                .fill(isRecording ? Color.red : Color.secondary)
-                                .frame(width: 4, height: 4)
-                                .opacity(isAnimating ? 1.0 : 0.3)
-                                .animation(
-                                    .easeInOut(duration: 0.6)
-                                        .repeatForever()
-                                        .delay(Double(index) * 0.2),
-                                    value: isAnimating
-                                )
+                // Header with status indicator
+                HStack {
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Text(isRecording ? "Recording" : "Processing")
+                            .font(.caption)
+                            .foregroundColor(isRecording ? .red : .secondary)
+                        
+                        // Animated dots
+                        HStack(spacing: 2) {
+                            ForEach(0..<3) { index in
+                                Circle()
+                                    .fill(isRecording ? Color.red : Color.secondary)
+                                    .frame(width: 4, height: 4)
+                                    .opacity(isAnimating ? 1.0 : 0.3)
+                                    .animation(
+                                        .easeInOut(duration: 0.6)
+                                            .repeatForever()
+                                            .delay(Double(index) * 0.2),
+                                        value: isAnimating
+                                    )
+                            }
                         }
                     }
                 }
-            }
-            
-            // Status title
-            Text(isRecording ? "Recording..." : "Creating Voice Note...")
-                .font(.headline)
-                .foregroundColor(.primary)
-                .opacity(0.7)
-            
-            Spacer()
-            
-            // Animated waveform
-            HStack(spacing: 2) {
-                ForEach(0..<20, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(isRecording ? Color.red.opacity(0.7) : Color.accentColor.opacity(0.6))
-                        .frame(width: 2, height: 8)
-                        .scaleEffect(
-                            y: isAnimating ? CGFloat.random(in: 0.5...1.5) : 1.0
-                        )
-                        .animation(
-                            .easeInOut(duration: 0.8 + Double(index) * 0.1)
-                                .repeatForever(autoreverses: true),
-                            value: isAnimating
-                        )
+                
+                // Status title
+                Text(isRecording ? "Recording..." : "Creating Voice Note...")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .opacity(0.7)
+                
+                Spacer()
+                
+                // Animated waveform
+                HStack(spacing: 2) {
+                    ForEach(0..<20, id: \.self) { index in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(isRecording ? Color.red.opacity(0.7) : Color.accentColor.opacity(0.6))
+                            .frame(width: 2, height: 8)
+                            .scaleEffect(
+                                y: isAnimating ? CGFloat.random(in: 0.5...1.5) : 1.0
+                            )
+                            .animation(
+                                .easeInOut(duration: 0.8 + Double(index) * 0.1)
+                                    .repeatForever(autoreverses: true),
+                                value: isAnimating
+                            )
+                    }
+                }
+                .frame(height: 16)
+                
+                // Status message
+                HStack {
+                    Text(isRecording ? "Hold to continue..." : "Processing...")
+                        .font(.footnote)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    Spacer()
                 }
             }
-            .frame(height: 16)
-            
-            // Status message
-            HStack {
-                Text(isRecording ? "Hold to continue..." : "Processing...")
-                    .font(.footnote)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-                Spacer()
+            .padding(16)
+            .frame(width: cardWidth, height: 140)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke((isRecording ? Color.red : Color.accentColor).opacity(0.3), lineWidth: 1)
+            )
+            .onAppear {
+                isAnimating = true
             }
-        }
-        .padding(16)
-        .frame(width: 180, height: 140)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke((isRecording ? Color.red : Color.accentColor).opacity(0.3), lineWidth: 1)
-        )
-        .onAppear {
-            isAnimating = true
-        }
     }
 }
 
